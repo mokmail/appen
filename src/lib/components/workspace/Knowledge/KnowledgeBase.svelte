@@ -55,8 +55,11 @@
 	import AddTextContentModal from './KnowledgeBase/AddTextContentModal.svelte';
 	import AddGitlabModal from './KnowledgeBase/AddGitlabModal.svelte';
 	import GitlabProgressModal from './KnowledgeBase/GitlabProgressModal.svelte';
+	import NewDirectoryModal from './KnowledgeBase/NewDirectoryModal.svelte';
+	import KnowledgeBreadcrumbs from './KnowledgeBase/KnowledgeBreadcrumbs.svelte';
 
 	import SyncConfirmDialog from '../../common/ConfirmDialog.svelte';
+	import ConfirmDialog from '../../common/ConfirmDialog.svelte';
 	import Drawer from '$lib/components/common/Drawer.svelte';
 	import ChevronLeft from '$lib/components/icons/ChevronLeft.svelte';
 	import LockClosed from '$lib/components/icons/LockClosed.svelte';
@@ -95,6 +98,7 @@
 		gitlabProgressFail = 0;
 		gitlabProgressMessage = '';
 	};
+	let showNewDirectoryModal = false;
 
 	let showSyncConfirmModal = false;
 	let pendingSyncFiles: Array<{path: string, filename: string, file: File}> | null = null;
@@ -133,6 +137,15 @@
 	let currentPage = 1;
 	let fileItems = null;
 	let fileItemsTotal = null;
+
+	// Directory state
+	let currentDirectoryId: string | null = null;
+	let directoryItems = [];
+	let breadcrumbs = [];
+
+	let showDeleteDirectoryConfirm = false;
+	let pendingDeleteDirectoryId: string | null = null;
+	let deleteDirectoryContents = true;
 
 	const reset = () => {
 		currentPage = 1;
@@ -189,7 +202,8 @@
 			viewOption,
 			sortKey,
 			direction,
-			currentPage
+			currentPage,
+			currentDirectoryId
 		).catch(() => {
 			return null;
 		});
@@ -197,6 +211,8 @@
 		if (res) {
 			fileItems = res.items;
 			fileItemsTotal = res.total;
+			directoryItems = res.directories ?? [];
+			breadcrumbs = res.breadcrumbs ?? [];
 		}
 		return res;
 	};
@@ -790,7 +806,12 @@
 	};
 
 	const addFileHandler = async (fileId) => {
-		const res = await addFileToKnowledgeById(localStorage.token, id, fileId).catch((e) => {
+		const res = await addFileToKnowledgeById(
+			localStorage.token,
+			id,
+			fileId,
+			currentDirectoryId
+		).catch((e) => {
 			toast.error(`${e}`);
 			return null;
 		});
@@ -801,6 +822,88 @@
 		} else {
 			toast.error($i18n.t('Failed to add file.'));
 			fileItems = fileItems.filter((file) => file.id !== fileId);
+		}
+	};
+
+	// Directory handlers
+	const navigateToDirectory = (directoryId: string | null) => {
+		currentDirectoryId = directoryId;
+		currentPage = 1;
+		selectedFileId = null;
+		selectedFile = null;
+		getItemsPage();
+	};
+
+	const createDirectoryHandler = async (name: string) => {
+		const res = await createKnowledgeDirectory(
+			localStorage.token,
+			knowledge.id,
+			name,
+			currentDirectoryId
+		).catch((e) => {
+			toast.error(`${e}`);
+			return null;
+		});
+
+		if (res) {
+			toast.success($i18n.t('Directory created.'));
+			getItemsPage();
+		}
+	};
+
+	const renameDirectoryHandler = async (dirId: string, name: string) => {
+		const res = await updateKnowledgeDirectory(localStorage.token, knowledge.id, dirId, {
+			name
+		}).catch((e) => {
+			toast.error(`${e}`);
+			return null;
+		});
+
+		if (res) {
+			toast.success($i18n.t('Directory renamed.'));
+			getItemsPage();
+		}
+	};
+
+	const confirmDeleteDirectory = (dirId: string) => {
+		pendingDeleteDirectoryId = dirId;
+		showDeleteDirectoryConfirm = true;
+	};
+
+	const deleteDirectoryHandler = async (moveFiles: boolean) => {
+		if (!pendingDeleteDirectoryId) return;
+
+		const res = await deleteKnowledgeDirectory(
+			localStorage.token,
+			knowledge.id,
+			pendingDeleteDirectoryId,
+			moveFiles
+		).catch((e) => {
+			toast.error(`${e}`);
+			return null;
+		});
+
+		if (res) {
+			toast.success($i18n.t('Directory deleted.'));
+			getItemsPage();
+		}
+		pendingDeleteDirectoryId = null;
+	};
+
+	const moveFileToDirectoryHandler = async (fileId: string, directoryId: string | null) => {
+		const res = await moveFileInKnowledge(
+			localStorage.token,
+			knowledge.id,
+			fileId,
+			directoryId
+		).catch((e) => {
+			toast.error(`${e}`);
+			return null;
+		});
+
+		if (res) {
+			toast.success($i18n.t('File moved.'));
+			getItemsPage();
 		}
 	};
 
@@ -1091,6 +1194,12 @@
 	bind:message={gitlabProgressMessage}
 />
 
+<NewDirectoryModal
+	bind:show={showNewDirectoryModal}
+	on:submit={(e) => {
+		createDirectoryHandler(e.detail.name);
+	}}
+/>
 <input
 	id="files-input"
 	bind:files={inputFiles}
@@ -1227,6 +1336,8 @@
 								onUpload={(data) => {
 									if (data.type === 'directory') {
 										uploadDirectoryHandler();
+									} else if (data.type === 'new_directory') {
+										showNewDirectoryModal = true;
 									} else if (data.type === 'web') {
 										showAddWebpageModal = true;
 									} else if (data.type === 'text') {
@@ -1252,6 +1363,12 @@
 					{/if}
 				</div>
 			</div>
+
+			{#if currentDirectoryId !== null}
+				<div class="px-5 -mt-1 pb-2">
+					<KnowledgeBreadcrumbs rootLabel={knowledge.name} {breadcrumbs} onNavigate={(dirId) => navigateToDirectory(dirId)} />
+				</div>
+			{/if}
 
 			<div class="px-3 flex justify-between">
 				<div
@@ -1314,10 +1431,11 @@
 					<div class="flex-1 flex">
 						<div class=" flex flex-col w-full space-x-2 rounded-lg h-full">
 							<div class="w-full h-full flex flex-col min-h-full">
-								{#if fileItems.length > 0}
+								{#if fileItems.length > 0 || directoryItems.length > 0}
 									<div class=" flex overflow-y-auto h-full w-full scrollbar-hidden text-xs">
 										<Files
 											files={fileItems}
+											directories={directoryItems}
 											{knowledge}
 											{selectedFileId}
 											onClick={(fileId) => {
@@ -1338,6 +1456,11 @@
 
 												deleteFileHandler(fileId);
 											}}
+											onNavigateDirectory={(dirId) => navigateToDirectory(dirId)}
+											onRenameDirectory={(id, name) => renameDirectoryHandler(id, name)}
+											onDeleteDirectory={(id) => confirmDeleteDirectory(id)}
+											onMoveFileToDirectory={(fileId, dirId) =>
+												moveFileToDirectoryHandler(fileId, dirId)}
 										/>
 									</div>
 
@@ -1427,3 +1550,26 @@
 		<Spinner className="size-5" />
 	{/if}
 </div>
+
+<ConfirmDialog
+	bind:show={showDeleteDirectoryConfirm}
+	title={$i18n.t('Delete directory?')}
+	on:confirm={() => {
+		deleteDirectoryHandler(!deleteDirectoryContents);
+	}}
+	on:cancel={() => {
+		pendingDeleteDirectoryId = null;
+	}}
+>
+	<div class="text-sm text-gray-700 dark:text-gray-300 flex-1 line-clamp-3 mb-2">
+		{$i18n.t(`Are you sure you want to delete this directory?`)}
+	</div>
+
+	<div class="flex items-center gap-1.5">
+		<input type="checkbox" bind:checked={deleteDirectoryContents} />
+
+		<div class="text-xs text-gray-500">
+			{$i18n.t('Delete all contents inside this directory')}
+		</div>
+	</div>
+</ConfirmDialog>
