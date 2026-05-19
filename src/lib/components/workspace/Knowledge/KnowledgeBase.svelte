@@ -273,7 +273,9 @@
 						res.content
 					);
 
-					const uploadedFile = await uploadFile(localStorage.token, file).catch((e) => {
+					const uploadedFile = await uploadFile(localStorage.token, file, {
+						knowledge_id: knowledge.id
+					}).catch((e) => {
 						toast.error(`${e}`);
 						return null;
 					});
@@ -292,7 +294,8 @@
 							toast.warning(uploadedFile.error);
 							fileItems = fileItems.filter((file) => file.id !== uploadedFile.id);
 						} else {
-							await addFileHandler(uploadedFile.id);
+							toast.success($i18n.t('File added successfully.'));
+							init();
 						}
 					} else {
 						toast.error($i18n.t('Failed to upload file.'));
@@ -458,7 +461,8 @@
 					toast.warning(uploadedFile.error);
 					fileItems = fileItems.filter((file) => file.id !== uploadedFile.id);
 				} else {
-					await addFileHandler(uploadedFile.id);
+					toast.success($i18n.t('File added successfully.'));
+					init();
 				}
 			} else {
 				toast.error($i18n.t('Failed to upload file.'));
