@@ -594,6 +594,7 @@ export const syncKnowledgeCleanup = async (
 export const deleteKnowledgeById = async (token: string, id: string) => {
 	let error = null;
 
+
 	const res = await fetch(`${WEBUI_API_BASE_URL}/knowledge/${id}/delete`, {
 		method: 'DELETE',
 		headers: {
