@@ -651,6 +651,213 @@ export const reindexKnowledgeFiles = async (token: string) => {
 	return res;
 };
 
+export const addGitlabRepoToKnowledge = async (token: string, id: string, url: string, accessToken?: string, branch?: string, ignoredExtensions?: string) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/knowledge/${id}/gitlab/repo`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({
+			url: url,
+			access_token: accessToken || null,
+			branch: branch || null,
+			ignored_extensions: ignoredExtensions || null
+		})
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			error = err.detail || JSON.stringify(err);
+			console.error(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const addGitlabWikiToKnowledge = async (token: string, id: string, url: string, accessToken?: string) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/knowledge/${id}/gitlab/wiki`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({
+			url: url,
+			access_token: accessToken || null
+		})
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			error = err.detail || JSON.stringify(err);
+			console.error(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export type GitlabProgressEvent = {
+	phase: 'fetching' | 'processing' | 'done' | 'error';
+	current?: number;
+	total?: number;
+	filename?: string;
+	success_count?: number;
+	fail_count?: number;
+	message?: string;
+	result?: any;
+};
+
+export const streamGitlabRepoToKnowledge = async (
+	token: string,
+	id: string,
+	url: string,
+	accessToken?: string,
+	branch?: string,
+	ignoredExtensions?: string,
+	onProgress?: (event: GitlabProgressEvent) => void
+): Promise<GitlabProgressEvent | null> => {
+	try {
+		const res = await fetch(`${WEBUI_API_BASE_URL}/knowledge/${id}/gitlab/repo/stream`, {
+			method: 'POST',
+			headers: {
+				Accept: 'text/event-stream',
+				'Content-Type': 'application/json',
+				authorization: `Bearer ${token}`
+			},
+			body: JSON.stringify({
+				url: url,
+				access_token: accessToken || null,
+				branch: branch || null,
+				ignored_extensions: ignoredExtensions || null
+			})
+		});
+
+		if (!res.ok) {
+			const errData = await res.json();
+			throw new Error(errData.detail || 'Failed to add GitLab repository');
+		}
+
+		const reader = res.body?.getReader();
+		if (!reader) throw new Error('No response body');
+
+		const decoder = new TextDecoder();
+		let buffer = '';
+		let lastEvent: GitlabProgressEvent | null = null;
+
+		while (true) {
+			const { done, value } = await reader.read();
+			if (done) break;
+
+			buffer += decoder.decode(value, { stream: true });
+			const lines = buffer.split('\n');
+			buffer = lines.pop() || '';
+
+			for (const line of lines) {
+				const trimmed = line.trim();
+				if (!trimmed.startsWith('data: ')) continue;
+
+				const jsonStr = trimmed.slice(6);
+				try {
+					const event: GitlabProgressEvent = JSON.parse(jsonStr);
+					lastEvent = event;
+					if (onProgress) onProgress(event);
+					if (event.phase === 'done' || event.phase === 'error') return event;
+				} catch {
+					continue;
+				}
+			}
+		}
+
+		return lastEvent;
+	} catch (e: any) {
+		throw e;
+	}
+};
+
+export const streamGitlabWikiToKnowledge = async (
+	token: string,
+	id: string,
+	url: string,
+	accessToken?: string,
+	onProgress?: (event: GitlabProgressEvent) => void
+): Promise<GitlabProgressEvent | null> => {
+	try {
+		const res = await fetch(`${WEBUI_API_BASE_URL}/knowledge/${id}/gitlab/wiki/stream`, {
+			method: 'POST',
+			headers: {
+				Accept: 'text/event-stream',
+				'Content-Type': 'application/json',
+				authorization: `Bearer ${token}`
+			},
+			body: JSON.stringify({
+				url: url,
+				access_token: accessToken || null
+			})
+		});
+
+		if (!res.ok) {
+			const errData = await res.json();
+			throw new Error(errData.detail || 'Failed to add GitLab wiki');
+		}
+
+		const reader = res.body?.getReader();
+		if (!reader) throw new Error('No response body');
+
+		const decoder = new TextDecoder();
+		let buffer = '';
+		let lastEvent: GitlabProgressEvent | null = null;
+
+		while (true) {
+			const { done, value } = await reader.read();
+			if (done) break;
+
+			buffer += decoder.decode(value, { stream: true });
+			const lines = buffer.split('\n');
+			buffer = lines.pop() || '';
+
+			for (const line of lines) {
+				const trimmed = line.trim();
+				if (!trimmed.startsWith('data: ')) continue;
+
+				const jsonStr = trimmed.slice(6);
+				try {
+					const event: GitlabProgressEvent = JSON.parse(jsonStr);
+					lastEvent = event;
+					if (onProgress) onProgress(event);
+					if (event.phase === 'done' || event.phase === 'error') return event;
+				} catch {
+					continue;
+				}
+			}
+		}
+
+		return lastEvent;
+	} catch (e: any) {
+		throw e;
+	}
+};
+
 export const exportKnowledgeById = async (token: string, id: string) => {
 	let error = null;
 

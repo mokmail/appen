@@ -10,8 +10,9 @@
 	import NewFolderAlt from '$lib/components/icons/NewFolderAlt.svelte';
 	import ArrowPath from '$lib/components/icons/ArrowPath.svelte';
 	import GlobeAlt from '$lib/components/icons/GlobeAlt.svelte';
-	import GarbageBin from '$lib/components/icons/GarbageBin.svelte';
 	import ArrowUturnLeft from '$lib/components/icons/ArrowUturnLeft.svelte';
+	import CodeBracket from '$lib/components/icons/CodeBracket.svelte';
+	import BookOpen from '$lib/components/icons/BookOpen.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -116,6 +117,28 @@
 			>
 				<GlobeAlt strokeWidth="2" />
 				<div class="flex items-center">{$i18n.t('Add webpage')}</div>
+			</button>
+
+			<div class="border-t border-gray-100 dark:border-gray-800 my-1"></div>
+
+			<button
+				class="select-none flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl w-full"
+				on:click={() => {
+					onUpload({ type: 'gitlab_repo' });
+				}}
+			>
+				<CodeBracket strokeWidth="2" />
+				<div class="flex items-center">{$i18n.t('Add GitLab repository')}</div>
+			</button>
+
+			<button
+				class="select-none flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl w-full"
+				on:click={() => {
+					onUpload({ type: 'gitlab_wiki' });
+				}}
+			>
+				<BookOpen strokeWidth="2" />
+				<div class="flex items-center">{$i18n.t('Add GitLab wiki')}</div>
 			</button>
 
 			<button
