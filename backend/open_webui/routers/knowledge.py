@@ -1459,18 +1459,20 @@ def _gitlab_api_get_raw(
 
 
 def _gitlab_list_all(
-    base_url: str, endpoint: str, access_token: Optional[str] = None
+    base_url: str, endpoint: str, access_token: Optional[str] = None, per_page: int = 100
 ) -> list:
     """List all items from a paginated GitLab API endpoint."""
     items = []
     page = 1
     while True:
         sep = '&' if '?' in endpoint else '?'
-        url_endpoint = f'{endpoint}{sep}page={page}&per_page=100'
+        url_endpoint = f'{endpoint}{sep}page={page}&per_page={per_page}'
         result = _gitlab_api_get(base_url, url_endpoint, access_token)
         if not result:
             break
         items.extend(result)
+        if len(result) < per_page:
+            break
         page += 1
     return items
 
@@ -1482,17 +1484,34 @@ def _parse_ignored_extensions(ignored_extensions: Optional[str]) -> set[str]:
     return {ext.strip().lstrip('.').lower() for ext in ignored_extensions.split(',') if ext.strip()}
 
 
+_BINARY_EXTENSIONS = {
+    'png', 'jpg', 'jpeg', 'gif', 'svg', 'ico', 'webp', 'bmp', 'tiff', 'avif',
+    'mp3', 'mp4', 'wav', 'avi', 'mov', 'mkv', 'flac', 'ogg', 'wmv', 'webm',
+    'zip', 'gz', 'tar', 'rar', '7z', 'bz2', 'xz', 'zst', 'jar', 'war', 'ear',
+    'woff', 'woff2', 'ttf', 'otf', 'eot',
+    'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'odt', 'ods', 'odp',
+    'sqlite', 'db', 'dll', 'so', 'dylib', 'exe', 'bin', 'obj', 'o', 'a',
+    'lock', 'map', 'pyc', 'pyo', 'class', 'wasm',
+}
+
+
 def _fetch_gitlab_repo_files(
     base_url: str, encoded_project: str, branch: Optional[str] = None, access_token: Optional[str] = None, ignored_extensions: Optional[set[str]] = None
 ) -> list[GitlabFileItem]:
-    """Fetch all text files from a GitLab repository."""
+    """Fetch all text files from a GitLab repository.
+
+    Automatically skips hidden files, common binary formats, and any
+    user-specified extensions.
+    """
     branch_param = f'ref={quote(branch, safe="")}' if branch else ''
-    tree_endpoint = f'projects/{encoded_project}/repository/tree?recursive=true&per_page=100'
+    tree_endpoint = f'projects/{encoded_project}/repository/tree?recursive=true'
     if branch_param:
         tree_endpoint += f'&{branch_param}'
 
     tree = _gitlab_list_all(base_url, tree_endpoint, access_token)
+    skip_ext = _BINARY_EXTENSIONS | (ignored_extensions or set())
     files = []
+    skipped = 0
 
     for entry in tree:
         if entry.get('type') != 'blob':
@@ -1500,16 +1519,13 @@ def _fetch_gitlab_repo_files(
         file_path = entry.get('path', '')
         file_name = entry.get('name', '')
 
-        # Skip hidden files
         if file_name.startswith('.'):
             continue
 
-        # Skip user-ignored extensions
-        if ignored_extensions:
-            ext = file_name.rsplit('.', 1)[-1].lower() if '.' in file_name else ''
-            if ext and ext in ignored_extensions:
-                log.debug(f'Skipping GitLab file {file_path} (ignored extension: .{ext})')
-                continue
+        ext = file_name.rsplit('.', 1)[-1].lower() if '.' in file_name else ''
+        if ext and ext in skip_ext:
+            skipped += 1
+            continue
 
         encoded_file_path = quote(file_path, safe='')
         content_endpoint = f'projects/{encoded_project}/repository/files/{encoded_file_path}/raw'
@@ -1523,6 +1539,8 @@ def _fetch_gitlab_repo_files(
             log.debug(f'Failed to fetch {file_path}: {e}')
             continue
 
+    if skipped:
+        log.info(f'Skipped {skipped} files with ignored/binary extensions')
     return files
 
 
@@ -1531,29 +1549,85 @@ def _fetch_gitlab_wiki_pages(
 ) -> list[GitlabFileItem]:
     """Fetch all wiki pages from a GitLab project wiki.
 
-    Fetches the page list without content first (fast), then fetches each
-    page individually.  This avoids the timeout caused by requesting
-    ``with_content=true`` on a project with many/large wiki pages.
+    Strategy:
+    1. List pages with ``with_content=true`` (small page sizes to avoid
+       timeouts).  Most pages come back with content inline.
+    2. For any page whose content was empty/missing, fetch individually
+       via ``wikis/{slug}``.
+    3. As a safety net, list all pages *without* content and fetch any
+       slugs we haven't seen yet (handles rare cases where the list
+       endpoint omits pages).
     """
-    pages = _gitlab_list_all(base_url, f'projects/{encoded_project}/wikis', access_token)
     files = []
+    seen_slugs = {}  # slug -> title
 
+    # Phase 1: bulk-fetch with content
+    pages = _gitlab_list_all(
+        base_url,
+        f'projects/{encoded_project}/wikis?with_content=true',
+        access_token,
+        per_page=20,
+    )
+
+    needs_detail = []
     for page in pages:
         slug = page.get('slug', '')
         title = page.get('title', slug)
+        content = page.get('content', '')
+        seen_slugs[slug] = title
 
+        if content:
+            filename = f'{title}.md' if title else f'{slug}.md'
+            files.append(GitlabFileItem(filename=filename, content=content))
+        else:
+            needs_detail.append((slug, title))
+
+    # Phase 2: fetch pages that lacked content one by one
+    for slug, title in needs_detail:
         try:
-            page_detail = _gitlab_api_get(base_url, f'projects/{encoded_project}/wikis/{quote(slug, safe="")}', access_token)
+            page_detail = _gitlab_api_get(
+                base_url,
+                f'projects/{encoded_project}/wikis/{quote(slug, safe="")}',
+                access_token,
+            )
             content = page_detail.get('content', '')
         except Exception as e:
             log.warning(f'Failed to fetch wiki page {slug}: {e}')
             continue
 
-        if not content:
+        if content:
+            filename = f'{title}.md' if title else f'{slug}.md'
+            files.append(GitlabFileItem(filename=filename, content=content))
+
+    # Phase 3: discover pages that were absent from the with_content listing
+    all_pages = _gitlab_list_all(
+        base_url,
+        f'projects/{encoded_project}/wikis',
+        access_token,
+        per_page=100,
+    )
+
+    for page in all_pages:
+        slug = page.get('slug', '')
+        if slug in seen_slugs:
+            continue
+        title = page.get('title', slug)
+        seen_slugs[slug] = title
+
+        try:
+            page_detail = _gitlab_api_get(
+                base_url,
+                f'projects/{encoded_project}/wikis/{quote(slug, safe="")}',
+                access_token,
+            )
+            content = page_detail.get('content', '')
+        except Exception as e:
+            log.warning(f'Failed to fetch wiki page {slug}: {e}')
             continue
 
-        filename = f'{title}.md' if title else f'{slug}.md'
-        files.append(GitlabFileItem(filename=filename, content=content))
+        if content:
+            filename = f'{title}.md' if title else f'{slug}.md'
+            files.append(GitlabFileItem(filename=filename, content=content))
 
     return files
 
@@ -1710,14 +1784,19 @@ async def _gitlab_stream_generator(request, id, form_data, user, db, source_type
     try:
         base_url, encoded_project, _ = _parse_gitlab_url(form_data.url)
 
-        fetching_msg = f"Fetching {source_type} files from GitLab..."
+        source_label = 'files' if source_type == 'repo' else 'pages'
+        fetching_msg = f"Fetching {source_type} from GitLab..."
         yield f'data: {json.dumps(GitlabProgressEvent(phase="fetching", message=fetching_msg).model_dump())}\n\n'
 
         if source_type == 'repo':
             ignored_ext = _parse_ignored_extensions(form_data.ignored_extensions)
-            files = _fetch_gitlab_repo_files(base_url, encoded_project, form_data.branch, form_data.access_token, ignored_extensions=ignored_ext)
+            files = await asyncio.to_thread(
+                _fetch_gitlab_repo_files, base_url, encoded_project, form_data.branch, form_data.access_token, ignored_ext
+            )
         else:
-            files = _fetch_gitlab_wiki_pages(base_url, encoded_project, form_data.access_token)
+            files = await asyncio.to_thread(
+                _fetch_gitlab_wiki_pages, base_url, encoded_project, form_data.access_token
+            )
 
         if not files:
             not_found_msg = f"No {'files' if source_type == 'repo' else 'wiki pages'} found"
@@ -1856,7 +1935,9 @@ async def add_gitlab_repo_to_knowledge(
     try:
         base_url, encoded_project, _ = _parse_gitlab_url(form_data.url)
         ignored_ext = _parse_ignored_extensions(form_data.ignored_extensions)
-        files = _fetch_gitlab_repo_files(base_url, encoded_project, form_data.branch, form_data.access_token, ignored_extensions=ignored_ext)
+        files = await asyncio.to_thread(
+            _fetch_gitlab_repo_files, base_url, encoded_project, form_data.branch, form_data.access_token, ignored_ext
+        )
 
         if not files:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='No files found in repository')
@@ -1902,7 +1983,9 @@ async def add_gitlab_wiki_to_knowledge(
 
     try:
         base_url, encoded_project, _ = _parse_gitlab_url(form_data.url)
-        files = _fetch_gitlab_wiki_pages(base_url, encoded_project, form_data.access_token)
+        files = await asyncio.to_thread(
+            _fetch_gitlab_wiki_pages, base_url, encoded_project, form_data.access_token
+        )
 
         if not files:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='No wiki pages found')
