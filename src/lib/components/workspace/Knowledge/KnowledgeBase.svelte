@@ -32,7 +32,9 @@
 		updateFileFromKnowledgeById,
 		updateKnowledgeById,
 		updateKnowledgeAccessGrants,
-		searchKnowledgeFilesById
+		searchKnowledgeFilesById,
+		streamGitlabRepoToKnowledge,
+		streamGitlabWikiToKnowledge
 	} from '$lib/apis/knowledge';
 	import { processWeb, processYoutubeVideo } from '$lib/apis/retrieval';
 
@@ -44,6 +46,8 @@
 
 	import AddContentMenu from './KnowledgeBase/AddContentMenu.svelte';
 	import AddTextContentModal from './KnowledgeBase/AddTextContentModal.svelte';
+	import AddGitlabModal from './KnowledgeBase/AddGitlabModal.svelte';
+	import GitlabProgressModal from './KnowledgeBase/GitlabProgressModal.svelte';
 
 	import SyncConfirmDialog from '../../common/ConfirmDialog.svelte';
 	import Drawer from '$lib/components/common/Drawer.svelte';
@@ -63,6 +67,27 @@
 
 	let showAddWebpageModal = false;
 	let showAddTextContentModal = false;
+	let showAddGitlabModal = false;
+	let gitlabSourceType: 'repo' | 'wiki' = 'repo';
+
+	let showGitlabProgress = false;
+	let gitlabProgressPhase: 'idle' | 'fetching' | 'processing' | 'done' | 'error' = 'idle';
+	let gitlabProgressCurrent = 0;
+	let gitlabProgressTotal = 0;
+	let gitlabProgressFilename = '';
+	let gitlabProgressSuccess = 0;
+	let gitlabProgressFail = 0;
+	let gitlabProgressMessage = '';
+
+	const resetGitlabProgress = () => {
+		gitlabProgressPhase = 'idle';
+		gitlabProgressCurrent = 0;
+		gitlabProgressTotal = 0;
+		gitlabProgressFilename = '';
+		gitlabProgressSuccess = 0;
+		gitlabProgressFail = 0;
+		gitlabProgressMessage = '';
+	};
 
 	let showSyncConfirmModal = false;
 	let showAccessControlModal = false;
@@ -258,6 +283,86 @@
 				fileItems = fileItems.filter((item) => item.itemId !== fileItem.itemId);
 				toast.error(`${e}`);
 			}
+		}
+	};
+
+	const uploadGitlabRepo = async (url: string, accessToken?: string, branch?: string, ignoredExtensions?: string) => {
+		resetGitlabProgress();
+		gitlabProgressPhase = 'fetching';
+		gitlabProgressMessage = $i18n.t('Fetching files from GitLab...');
+		showGitlabProgress = true;
+
+		try {
+			const result = await streamGitlabRepoToKnowledge(
+				localStorage.token,
+				knowledge.id,
+				url,
+				accessToken,
+				branch,
+				ignoredExtensions,
+				(event) => {
+					if (event.phase) gitlabProgressPhase = event.phase;
+					if (event.current !== undefined) gitlabProgressCurrent = event.current;
+					if (event.total !== undefined) gitlabProgressTotal = event.total;
+					if (event.filename) gitlabProgressFilename = event.filename;
+					if (event.success_count !== undefined) gitlabProgressSuccess = event.success_count;
+					if (event.fail_count !== undefined) gitlabProgressFail = event.fail_count;
+					if (event.message) gitlabProgressMessage = event.message;
+				}
+			);
+
+			if (result && result.phase === 'done') {
+				gitlabProgressPhase = 'done';
+				toast.success($i18n.t('GitLab repository added successfully.'));
+				init();
+			} else if (result && result.phase === 'error') {
+				gitlabProgressPhase = 'error';
+				gitlabProgressMessage = result.message || $i18n.t('Failed to add GitLab repository.');
+				toast.error(gitlabProgressMessage);
+			}
+		} catch (e) {
+			gitlabProgressPhase = 'error';
+			gitlabProgressMessage = `${e}`;
+			toast.error(`${e}`);
+		}
+	};
+
+	const uploadGitlabWiki = async (url: string, accessToken?: string) => {
+		resetGitlabProgress();
+		gitlabProgressPhase = 'fetching';
+		gitlabProgressMessage = $i18n.t('Fetching wiki pages from GitLab...');
+		showGitlabProgress = true;
+
+		try {
+			const result = await streamGitlabWikiToKnowledge(
+				localStorage.token,
+				knowledge.id,
+				url,
+				accessToken,
+				(event) => {
+					if (event.phase) gitlabProgressPhase = event.phase;
+					if (event.current !== undefined) gitlabProgressCurrent = event.current;
+					if (event.total !== undefined) gitlabProgressTotal = event.total;
+					if (event.filename) gitlabProgressFilename = event.filename;
+					if (event.success_count !== undefined) gitlabProgressSuccess = event.success_count;
+					if (event.fail_count !== undefined) gitlabProgressFail = event.fail_count;
+					if (event.message) gitlabProgressMessage = event.message;
+				}
+			);
+
+			if (result && result.phase === 'done') {
+				gitlabProgressPhase = 'done';
+				toast.success($i18n.t('GitLab wiki added successfully.'));
+				init();
+			} else if (result && result.phase === 'error') {
+				gitlabProgressPhase = 'error';
+				gitlabProgressMessage = result.message || $i18n.t('Failed to add GitLab wiki.');
+				toast.error(gitlabProgressMessage);
+			}
+		} catch (e) {
+			gitlabProgressPhase = 'error';
+			gitlabProgressMessage = `${e}`;
+			toast.error(`${e}`);
 		}
 	};
 
@@ -806,6 +911,28 @@
 	}}
 />
 
+<AddGitlabModal
+	bind:show={showAddGitlabModal}
+	onSubmit={(e) => {
+		if (e.type === 'repo') {
+			uploadGitlabRepo(e.data.url, e.data.accessToken, e.data.branch, e.data.ignoredExtensions);
+		} else if (e.type === 'wiki') {
+			uploadGitlabWiki(e.data.url, e.data.accessToken);
+		}
+	}}
+/>
+
+<GitlabProgressModal
+	bind:show={showGitlabProgress}
+	bind:phase={gitlabProgressPhase}
+	bind:current={gitlabProgressCurrent}
+	bind:total={gitlabProgressTotal}
+	bind:filename={gitlabProgressFilename}
+	bind:successCount={gitlabProgressSuccess}
+	bind:failCount={gitlabProgressFail}
+	bind:message={gitlabProgressMessage}
+/>
+
 <input
 	id="files-input"
 	bind:files={inputFiles}
@@ -946,6 +1073,12 @@
 										showAddWebpageModal = true;
 									} else if (data.type === 'text') {
 										showAddTextContentModal = true;
+									} else if (data.type === 'gitlab_repo') {
+										gitlabSourceType = 'repo';
+										showAddGitlabModal = true;
+									} else if (data.type === 'gitlab_wiki') {
+										gitlabSourceType = 'wiki';
+										showAddGitlabModal = true;
 									} else {
 										document.getElementById('files-input').click();
 									}
