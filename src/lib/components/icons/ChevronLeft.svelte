@@ -1,16 +1,12 @@
 <script lang="ts">
-	export let className = 'w-4 h-4';
+	import ChevronLeft from 'lucide-svelte/icons/chevron-left';
+	export let className = 'size-4';
 	export let strokeWidth = '1.5';
 </script>
 
-<svg
+<ChevronLeft
 	aria-hidden="true"
-	xmlns="http://www.w3.org/2000/svg"
-	fill="none"
-	viewBox="0 0 24 24"
-	stroke-width={strokeWidth}
-	stroke="currentColor"
 	class={className}
->
-	<path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
-</svg>
+	strokeWidth={strokeWidth}
+	size={undefined}
+/>

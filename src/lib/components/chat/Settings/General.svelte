@@ -14,7 +14,7 @@
 	export let getModels: Function;
 
 	// General
-	let themes = ['dark', 'light', 'oled-dark'];
+	let themes = ['dark', 'light', 'oled-dark', 'bev'];
 	let selectedTheme = 'system';
 
 	let languages: Awaited<ReturnType<typeof getLanguages>> = [];
@@ -141,24 +141,36 @@
 			themeToApply = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 		}
 
-		if (themeToApply === 'dark' && !_theme.includes('oled')) {
-			document.documentElement.style.setProperty('--color-gray-800', '#333');
-			document.documentElement.style.setProperty('--color-gray-850', '#262626');
-			document.documentElement.style.setProperty('--color-gray-900', '#171717');
-			document.documentElement.style.setProperty('--color-gray-950', '#0d0d0d');
+		// BEV theme resolves to light/dark base + the `bev` modifier class
+		let bevMode = '';
+		if (_theme === 'bev') {
+			bevMode = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+			themeToApply = bevMode;
+		}
+
+		if (themeToApply === 'dark' && !_theme.includes('oled') && _theme !== 'bev') {
+			document.documentElement.style.setProperty('--color-gray-800', '#2b2b2b');
+			document.documentElement.style.setProperty('--color-gray-850', '#1f1f1f');
+			document.documentElement.style.setProperty('--color-gray-900', '#1a1a1a');
+			document.documentElement.style.setProperty('--color-gray-950', '#101010');
 		}
 
 		themes
-			.filter((e) => e !== themeToApply)
+			.filter((e) => e !== themeToApply && e !== 'bev')
 			.forEach((e) => {
 				e.split(' ').forEach((e) => {
 					document.documentElement.classList.remove(e);
 				});
 			});
+		document.documentElement.classList.remove('bev');
 
 		themeToApply.split(' ').forEach((e) => {
 			document.documentElement.classList.add(e);
 		});
+
+		if (_theme === 'bev') {
+			document.documentElement.classList.add('bev');
+		}
 
 		const metaThemeColor = document.querySelector('meta[name="theme-color"]');
 		if (metaThemeColor) {
@@ -167,17 +179,19 @@
 					? 'dark'
 					: 'light';
 				console.log('Setting system meta theme color: ' + systemTheme);
-				metaThemeColor.setAttribute('content', systemTheme === 'light' ? '#ffffff' : '#171717');
+				metaThemeColor.setAttribute('content', systemTheme === 'light' ? '#ffffff' : '#1a1a1a');
+			} else if (_theme === 'bev') {
+				metaThemeColor.setAttribute('content', bevMode === 'dark' ? '#1a1a1a' : '#ffffff');
 			} else {
 				console.log('Setting meta theme color: ' + _theme);
 				metaThemeColor.setAttribute(
 					'content',
 					_theme === 'dark'
-						? '#171717'
+						? '#1a1a1a'
 						: _theme === 'oled-dark'
 							? '#000000'
 							: _theme === 'her'
-								? '#983724'
+								? '#b92b06'
 								: '#ffffff'
 				);
 			}
@@ -188,7 +202,7 @@
 		}
 
 		if (_theme.includes('oled')) {
-			document.documentElement.style.setProperty('--color-gray-800', '#101010');
+			document.documentElement.style.setProperty('--color-gray-800', '#0a0a0a');
 			document.documentElement.style.setProperty('--color-gray-850', '#050505');
 			document.documentElement.style.setProperty('--color-gray-900', '#000000');
 			document.documentElement.style.setProperty('--color-gray-950', '#000000');
@@ -221,13 +235,14 @@
 						placeholder={$i18n.t('Select a theme')}
 						on:change={() => themeChangeHandler(selectedTheme)}
 					>
-						<option value="system">⚙️ {$i18n.t('System')}</option>
-						<option value="dark">🌑 {$i18n.t('Dark')}</option>
-						<option value="oled-dark">🌃 {$i18n.t('OLED Dark')}</option>
-						<option value="light">☀️ {$i18n.t('Light')}</option>
-						{#if $config?.features?.enable_easter_eggs}
-							<option value="her">🌷 Her</option>
-						{/if}
+					<option value="system">⚙️ {$i18n.t('System')}</option>
+					<option value="dark">🌑 {$i18n.t('Dark')}</option>
+					<option value="oled-dark">🌃 {$i18n.t('OLED Dark')}</option>
+					<option value="light">☀️ {$i18n.t('Light')}</option>
+					<option value="bev">🇦🇹 BEV</option>
+					{#if $config?.features?.enable_easter_eggs}
+						<option value="her">🌷 Her</option>
+					{/if}
 					</select>
 				</div>
 			</div>
@@ -262,10 +277,10 @@
 						class="font-medium underline {($settings?.highContrastMode ?? false)
 							? 'text-gray-700 dark:text-gray-200'
 							: 'text-gray-300'}"
-						href="https://github.com/open-webui/open-webui/blob/main/docs/CONTRIBUTING.md#-translations-and-internationalization"
+						href="https://bev.gv.at"
 						target="_blank"
 					>
-						Help us translate Open WebUI!
+						Help us translate the app!
 					</a>
 				</div>
 			{/if}

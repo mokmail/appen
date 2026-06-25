@@ -1,0 +1,80 @@
+services:
+  # ollama:
+  #   volumes:
+  #     - ollama:/root/.ollama
+  #   container_name: ollama
+  #   pull_policy: always
+  #   tty: true
+  #   restart: unless-stopped
+  #   image: ollama/ollama:${OLLAMA_DOCKER_TAG-latest}
+  #   ports:
+  #     - ${OLLAMA_PORT-11434}:11434
+
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:${WEBUI_DOCKER_TAG-main}
+    container_name: open-webui
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+    volumes:
+      - open-webui:/app/backend/data
+    # depends_on:
+    #   - ollama
+    ports:
+      - ${OPEN_WEBUI_PORT-3000}:8080
+    environment:
+      - 'OLLAMA_BASE_URL=http://ollama:11434'
+      - 'WEBUI_SECRET_KEY=${WEBUI_SECRET_KEY}'
+      - 'ENABLE_API_KEYS=${ENABLE_API_KEYS}'
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    restart: unless-stopped
+
+  oikb:
+    image: ghcr.io/open-webui/oikb:latest
+    container_name: oikb
+    environment:
+      - OPEN_WEBUI_URL=http://open-webui:8080
+      - OPEN_WEBUI_API_KEY=${OPEN_WEBUI_API_KEY}
+      - OIKB_API_KEY=${OIKB_API_KEY}
+      - LOG_FORMAT=json
+    volumes:
+      - ./docs:/data/docs
+      - ./oikb-data:/data
+    command: ["daemon", "--config", "/data/.oikb.yaml"]
+    ports:
+      - "8084:8080"
+    depends_on:
+      - open-webui
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health/ready"]
+      interval: 30s
+      timeout: 5s
+
+  oikb-orchestrator:
+    build: ./oikb-orchestrator
+    container_name: oikb-orchestrator
+    environment:
+      - OIKB_URL=http://oikb:8080
+      - OIKB_API_KEY=${OIKB_API_KEY}
+      - OIKB_GUI_HOST=0.0.0.0
+      - OIKB_GUI_PORT=8086
+      - OIKB_CONFIG_PATH=/data/.oikb.yaml
+    volumes:
+      - ./docs:/data/docs
+      - ./oikb-data:/data
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      - "8086:8086"
+    depends_on:
+      - oikb
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8086/info',timeout=4).status==200 else 1)"]
+      interval: 30s
+      timeout: 5s
+
+volumes:
+  open-webui: {}

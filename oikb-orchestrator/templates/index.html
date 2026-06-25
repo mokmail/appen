@@ -1,0 +1,1181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>oikb Orchestrator</title>
+<style>
+  :root {
+    --bg:#0f1117; --panel:#1a1d27; --panel2:#222633; --border:#2c3142;
+    --text:#e6e8ee; --muted:#8b91a3; --accent:#7c9cff; --accent2:#5b7cff;
+    --ok:#43b581; --warn:#faa61a; --err:#f04747; --code-bg:#11131a;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.5}
+  a{color:var(--accent);text-decoration:none}
+  .layout{display:grid;grid-template-columns:230px 1fr;min-height:100vh}
+  /* Sidebar */
+  .sidebar{background:var(--panel);border-right:1px solid var(--border);padding:18px 0;position:sticky;top:0;height:100vh;overflow:auto}
+  .brand{padding:0 20px 18px;font-weight:700;font-size:16px;color:#fff;border-bottom:1px solid var(--border);margin-bottom:10px}
+  .brand small{display:block;font-weight:400;color:var(--muted);font-size:11px;margin-top:3px}
+  .nav{list-style:none;padding:0;margin:0}
+  .nav-item{padding:9px 20px;color:var(--muted);cursor:pointer;display:flex;align-items:center;gap:9px;font-size:13px;border-left:3px solid transparent;transition:all .12s}
+  .nav-item:hover{background:var(--panel2);color:var(--text)}
+  .nav-item.active{background:var(--panel2);color:#fff;border-left-color:var(--accent)}
+  .nav-section{padding:14px 20px 6px;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+  .ic{width:14px;text-align:center;opacity:.85}
+  /* Main */
+  .main{padding:28px 34px;max-width:1100px}
+  .page{display:none}
+  .page.active{display:block}
+  h1{font-size:22px;margin:0 0 6px}
+  h2{font-size:18px;margin:26px 0 8px;border-bottom:1px solid var(--border);padding-bottom:8px}
+  .sub{color:var(--muted);margin:0 0 18px;font-size:13px}
+  /* Cards / forms */
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:18px 20px;margin-bottom:16px}
+  .grid{display:grid;gap:14px}
+  .grid-2{grid-template-columns:1fr 1fr}
+  @media(max-width:820px){.grid-2{grid-template-columns:1fr}}
+  label{display:block;font-size:12px;color:var(--muted);margin-bottom:4px}
+  input,select,textarea{width:100%;background:var(--code-bg);border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:var(--text);font-size:13px;font-family:inherit}
+  input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent)}
+  textarea{font-family:'SF Mono',Consolas,Menlo,monospace;resize:vertical;min-height:80px}
+  .row{display:flex;gap:10px;align-items:flex-end}
+  .row > *{flex:1}
+  .switch{display:inline-flex;align-items:center;gap:7px;font-size:13px;color:var(--text);cursor:pointer;user-select:none}
+  .switch input{width:auto}
+  /* buttons */
+  .btn{display:inline-flex;align-items:center;gap:7px;background:var(--accent2);color:#fff;border:none;border-radius:7px;padding:9px 16px;font-size:13px;font-weight:500;cursor:pointer;transition:filter .12s}
+  .btn:hover{filter:brightness(1.12)}
+  .btn:disabled{opacity:.55;cursor:default}
+  .btn.secondary{background:var(--panel2);border:1px solid var(--border);color:var(--text)}
+  .btn.ghost{background:transparent;border:1px solid var(--border);color:var(--muted)}
+  /* response */
+  .resp{margin-top:16px}
+  .resp-bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;font-size:12px;color:var(--muted)}
+  .resp-bar .status{font-weight:600}
+  .status.ok{color:var(--ok)} .status.err{color:var(--err)} .status.warn{color:var(--warn)}
+  pre{background:var(--code-bg);border:1px solid var(--border);border-radius:8px;padding:14px;overflow:auto;max-height:520px;font-size:12px;line-height:1.55;font-family:'SF Mono',Consolas,Menlo,monospace;margin:0}
+  pre.plain{white-space:pre-wrap;word-break:break-word}
+  .hint{font-size:11px;color:var(--muted);margin-top:5px}
+  .badge{display:inline-block;background:var(--panel2);border:1px solid var(--border);border-radius:4px;padding:1px 6px;font-size:10px;color:var(--muted);font-family:monospace;margin-right:5px}
+  .spinner{width:14px;height:14px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:sp .6s linear infinite;display:none}
+  @keyframes sp{to{transform:rotate(360deg)}}
+  .pill{display:inline-block;padding:2px 9px;border-radius:12px;font-size:11px;background:var(--panel2);border:1px solid var(--border)}
+  .pill.live{color:var(--ok);border-color:var(--ok)}
+  .pill.off{color:var(--err);border-color:var(--err)}
+  /* table */
+  table{width:100%;border-collapse:collapse;font-size:12px}
+  th,td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--border)}
+  th{color:var(--muted);font-weight:500;font-size:11px;text-transform:uppercase;letter-spacing:.04em}
+  tr:hover td{background:var(--panel2)}
+  /* misc */
+  .kv{display:grid;grid-template-columns:140px 1fr;gap:8px 14px;font-size:13px}
+  .kv .k{color:var(--muted)}
+  .toast{position:fixed;bottom:18px;right:18px;background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;font-size:12px;box-shadow:0 6px 24px rgba(0,0,0,.4);opacity:0;transform:translateY(8px);transition:.2s;pointer-events:none}
+  .toast.show{opacity:1;transform:none}
+</style>
+</head>
+<body>
+<div class="layout">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="brand">oikb Orchestrator
+      <small id="daemon-info">connecting…</small>
+    </div>
+    <ul class="nav">
+      <li class="nav-section">Monitoring</li>
+      <li class="nav-item active" data-page="sources"><span class="ic">≡</span> Sources &amp; Status</li>
+      <li class="nav-item" data-page="health"><span class="ic">●</span> Health / Probes</li>
+      <li class="nav-item" data-page="history"><span class="ic">⏱</span> Sync History</li>
+      <li class="nav-section">Sync</li>
+      <li class="nav-item" data-page="sync"><span class="ic">↻</span> Trigger Sync</li>
+      <li class="nav-item" data-page="local-sync"><span class="ic">⌂</span> Local Directory</li>
+      <li class="nav-section">Webhooks</li>
+      <li class="nav-item" data-page="webhook-gh"><span class="ic">⎇</span> GitHub</li>
+      <li class="nav-item" data-page="webhook-gl"><span class="ic">⎇</span> GitLab</li>
+      <li class="nav-item" data-page="webhook-sl"><span class="ic">💬</span> Slack</li>
+      <li class="nav-item" data-page="webhook-cf"><span class="ic">📄</span> Confluence</li>
+      <li class="nav-section">Reference</li>
+      <li class="nav-item" data-page="connectors"><span class="ic">⊞</span> Connectors (45)</li>
+      <li class="nav-section">Infrastructure</li>
+      <li class="nav-item" data-page="volumes"><span class="ic">💾</span> Volume Mounts</li>
+      <li class="nav-section">Observability</li>
+      <li class="nav-item" data-page="metrics"><span class="ic">📊</span> Prometheus Metrics</li>
+      <li class="nav-section">Settings</li>
+      <li class="nav-item" data-page="info"><span class="ic">ℹ</span> Connection / Info</li>
+    </ul>
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+    <!-- ===== Sources & Status (default) ===== -->
+    <section id="page-sources" class="page active">
+      <h1>Sources &amp; Status</h1>
+      <p class="sub">
+        Every source from <code>oikb.yaml</code> with live status from <span class="badge">GET /health</span>.
+        Missing sources usually mean the daemon skipped them (missing credentials / connector env).
+      </p>
+
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+          <h2 style="margin:0;border:0;padding:0">Configured sources</h2>
+          <div>
+            <button class="btn secondary" id="btn-src-refresh">Refresh status</button>
+            <button class="btn" id="btn-src-add">+ Add source</button>
+          </div>
+        </div>
+        <table id="sources-table">
+          <thead><tr><th>Name</th><th>Source</th><th>KB id</th><th>Interval</th><th>Live status</th><th>Last sync</th><th>Error</th><th></th></tr></thead>
+          <tbody><tr><td colspan="8" style="color:var(--muted)">Loading…</td></tr></tbody>
+        </table>
+      </div>
+
+      <div class="card" id="src-add-form" style="display:none">
+        <h2 style="margin:0 0 12px;border:0;padding:0">Add / edit source</h2>
+        <div class="grid grid-2">
+          <div><label>Name *</label><input id="src-name" placeholder="docs" /></div>
+          <div>
+            <label>Source type *</label>
+            <div style="display:flex;gap:6px">
+              <select id="src-source-type" style="flex:0 0 auto;width:auto;min-width:150px"></select>
+              <input id="src-source" placeholder="owner/repo, bucket/key, …" style="flex:1" />
+            </div>
+          </div>
+          <div><label>KB id *</label><input id="src-kbid" placeholder="d6b17ae5-…" /></div>
+          <div><label>Interval</label><input id="src-interval" placeholder="5m, 1h, 0 6 * * 1-5" /></div>
+          <div id="field-group-branch" style="display:none"><label>Branch</label><input id="src-branch" placeholder="main" /></div>
+          <div id="field-group-path" style="display:none"><label>Path / prefix</label><input id="src-path" placeholder="docs/" /></div>
+        </div>
+        <div style="margin-top:10px"><label>Include globs (comma-sep)</label><input id="src-include" placeholder="docs/**/*.md" /></div>
+        <div style="margin-top:10px"><label>Exclude globs (comma-sep)</label><input id="src-exclude" placeholder="drafts/**" /></div>
+        <div class="hint">Saving rewrites <code>oikb.yaml</code>. The daemon picks up changes on next scheduled tick — or trigger a sync manually.</div>
+        <div style="margin-top:12px">
+          <button class="btn" id="btn-src-save">Save source</button>
+          <button class="btn ghost" id="btn-src-cancel">Cancel</button>
+          <button class="btn ghost" id="btn-src-validate" style="margin-left:8px">Validate via daemon</button>
+        </div>
+        <div class="resp" id="resp-src"></div>
+      </div>
+
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+          <h2 style="margin:0;border:0;padding:0">Sync output</h2>
+          <div>
+            <button class="btn secondary" id="btn-run-all">Sync all sources</button>
+            <button class="btn secondary" id="btn-run-validate">Validate config (--deep)</button>
+          </div>
+        </div>
+        <div class="hint" style="margin-bottom:8px">Runs <code>oikb sync</code> inside the oikb container and streams the real CLI output (file counts, diff, errors).</div>
+        <div class="resp" id="resp-run"></div>
+      </div>
+    </section>
+
+    <!-- ===== Health / Probes ===== -->
+    <section id="page-health" class="page">
+      <h1>Health &amp; Probes</h1>
+      <p class="sub">Readiness/liveness probes plus per-source sync status from <span class="badge">GET /health</span>.</p>
+
+      <div class="card">
+        <div class="grid-2 grid">
+          <div>
+            <label>Endpoint</label>
+            <select id="health-endpoint">
+              <option value="/health">/health — sync status for all sources</option>
+              <option value="/health/ready">/health/ready — liveness probe</option>
+            </select>
+            <div class="hint">Both are GET requests, no parameters.</div>
+          </div>
+          <div style="display:flex;align-items:flex-end">
+            <button class="btn" id="btn-health">Run probe</button>
+          </div>
+        </div>
+        <div class="resp" id="resp-health"></div>
+      </div>
+
+      <div class="card">
+        <h2 style="margin:0 0 10px;border:0;padding:0">Daemon connectivity</h2>
+        <div class="kv">
+          <div class="k">Status</div><div><span class="pill" id="pill-live">checking…</span></div>
+          <div class="k">oikb URL</div><div id="oikb-url">—</div>
+          <div class="k">API key</div><div id="oikb-key">—</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== Trigger Sync ===== -->
+    <section id="page-sync" class="page">
+      <h1>Trigger Sync</h1>
+      <p class="sub">
+        Immediately run a sync for one source. The path parameter can be either the
+        source <b>name</b> or its <b>kb-id</b> as defined in <code>.oikb.yaml</code>.
+        <span class="badge">POST /sync/{name-or-kb-id}</span>
+      </p>
+
+      <div class="card">
+        <div class="grid-2 grid">
+          <div>
+            <label>Source name or kb-id <span style="color:var(--err)">*</span></label>
+            <input id="sync-id" placeholder="e.g. docs or 8f3a2b1c-1234-…" />
+            <div class="hint">Get the list of sources from <b>GET /health</b>.</div>
+          </div>
+          <div>
+            <label>Dry run</label>
+            <label class="switch"><input type="checkbox" id="sync-dry" /> Preview changes (no upload)</label>
+            <div class="hint">Equivalent to <code>?dry_run=true</code> query param.</div>
+          </div>
+        </div>
+        <div style="margin-top:14px">
+          <button class="btn" id="btn-sync">Trigger sync</button>
+          <button class="btn secondary" id="btn-health-fill">Load sources from /health</button>
+        </div>
+        <div class="resp" id="resp-sync"></div>
+      </div>
+    </section>
+
+    <!-- ===== Local Directory Sync ===== -->
+    <section id="page-local-sync" class="page">
+      <h1>Sync Local Directory</h1>
+      <p class="sub">
+        Browse the host filesystem, select a directory, and sync it with a knowledge base
+        with one click. The directory will be mounted into the oikb container and added
+        as a <code>local</code> source.
+      </p>
+
+      <div class="card">
+        <h2 style="margin:0 0 12px;border:0;padding:0">1. Select directory</h2>
+        <div class="row">
+          <div style="flex:3">
+            <label>Host path</label>
+            <input id="local-path" placeholder="/home/user/my-docs" />
+          </div>
+          <div style="flex:0">
+            <label>&nbsp;</label>
+            <button class="btn" id="btn-local-browse" style="white-space:nowrap">Browse</button>
+          </div>
+          <div style="flex:0">
+            <label>&nbsp;</label>
+            <button class="btn ghost" id="btn-local-up" title="Go to parent directory">↑</button>
+          </div>
+        </div>
+        <div style="margin-top:8px">
+          <div id="local-contents" style="background:var(--code-bg);border:1px solid var(--border);border-radius:8px;padding:6px 0;max-height:320px;overflow:auto;font-size:13px">
+            <div style="padding:10px 14px;color:var(--muted)">Enter a path above and click <b>Browse</b>, or click a directory to navigate.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2 style="margin:0 0 12px;border:0;padding:0">2. Configure sync</h2>
+        <div class="grid grid-2">
+          <div><label>Source name *</label><input id="local-name" placeholder="my-docs" /></div>
+          <div><label>KB ID *</label><input id="local-kbid" placeholder="d6b17ae5-…" /></div>
+        </div>
+        <div style="margin-top:10px">
+          <label>Container path (auto-detected)</label>
+          <input id="local-container" readonly style="background:var(--panel2);color:var(--muted);cursor:default" />
+        </div>
+        <div class="hint" style="margin-top:8px">
+          The source will be added to <code>oikb.yaml</code> with the container path as its source value.
+          Get the KB ID from the Open WebUI knowledge base page (it's the UUID in the URL).
+        </div>
+      </div>
+
+      <div class="card">
+        <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+          <button class="btn" id="btn-local-sync">⚡ Mount &amp; Sync</button>
+          <span class="hint" style="margin:0">
+            Mounts the directory into the oikb container, adds a local source entry,
+            and triggers <code>oikb sync</code>.
+          </span>
+        </div>
+        <div class="resp" id="resp-local-sync"></div>
+      </div>
+    </section>
+
+    <!-- ===== Sync History ===== -->
+    <section id="page-history" class="page">
+      <h1>Sync History</h1>
+      <p class="sub">List past sync runs. Optional filters: by KB id or errors only.
+        <span class="badge">GET /history</span></p>
+
+      <div class="card">
+        <div class="grid-2 grid">
+          <div>
+            <label>Filter by KB id</label>
+            <input id="hist-kb" placeholder="optional — kb-id" />
+          </div>
+          <div>
+            <label>&nbsp;</label>
+            <label class="switch"><input type="checkbox" id="hist-errors" /> Errors only</label>
+          </div>
+        </div>
+        <div style="margin-top:14px"><button class="btn" id="btn-history">Load history</button></div>
+        <div class="resp" id="resp-history"></div>
+      </div>
+    </section>
+
+    <!-- ===== Webhook: GitHub ===== -->
+    <section id="page-webhook-gh" class="page">
+      <h1>GitHub Webhook</h1>
+      <p class="sub">Simulate a GitHub <code>push</code> event delivered to the daemon.
+        <span class="badge">POST /webhooks/github</span></p>
+      <div class="card">
+        <label>Event type (X-GitHub-Event header)</label>
+        <input id="gh-event" value="push" />
+        <label style="margin-top:10px">Webhook signature (X-Hub-Signature-256, optional)</label>
+        <input id="gh-sig" placeholder="sha256=…" />
+        <label style="margin-top:10px">Payload (JSON)</label>
+        <textarea id="gh-payload" rows="12">{
+  "ref": "refs/heads/main",
+  "repository": {
+    "full_name": "myorg/myrepo",
+    "clone_url": "https://github.com/myorg/myrepo.git"
+  },
+  "commits": [
+    {"id": "abc1234", "message": "update docs", "added": ["docs/guide.md"], "modified": [], "removed": []}
+  ]
+}</textarea>
+        <div style="margin-top:12px"><button class="btn" id="btn-webhook-gh">Send webhook</button></div>
+        <div class="resp" id="resp-webhook-gh"></div>
+      </div>
+    </section>
+
+    <!-- ===== Webhook: GitLab ===== -->
+    <section id="page-webhook-gl" class="page">
+      <h1>GitLab Webhook</h1>
+      <p class="sub">Simulate a GitLab <code>push</code> event.
+        <span class="badge">POST /webhooks/gitlab</span></p>
+      <div class="card">
+        <label>X-Gitlab-Event header</label>
+        <input id="gl-event" value="Push Hook" />
+        <label style="margin-top:10px">X-Gitlab-Token (optional secret)</label>
+        <input id="gl-token" placeholder="optional" />
+        <label style="margin-top:10px">Payload (JSON)</label>
+        <textarea id="gl-payload" rows="12">{
+  "object_kind": "push",
+  "ref": "refs/heads/main",
+  "project": {
+    "git_http_url": "https://gitlab.com/myorg/myrepo.git",
+    "path_with_namespace": "myorg/myrepo"
+  },
+  "commits": [
+    {"id": "abc1234", "message": "update docs", "added": ["docs/readme.md"], "modified": [], "removed": []}
+  ]
+}</textarea>
+        <div style="margin-top:12px"><button class="btn" id="btn-webhook-gl">Send webhook</button></div>
+        <div class="resp" id="resp-webhook-gl"></div>
+      </div>
+    </section>
+
+    <!-- ===== Webhook: Slack ===== -->
+    <section id="page-webhook-sl" class="page">
+      <h1>Slack Webhook</h1>
+      <p class="sub">Simulate a Slack event payload.
+        <span class="badge">POST /webhooks/slack</span></p>
+      <div class="card">
+        <label>Slack signing secret (optional)</label>
+        <input id="sl-secret" placeholder="optional" />
+        <label style="margin-top:10px">Payload (JSON)</label>
+        <textarea id="sl-payload" rows="12">{
+  "type": "event_callback",
+  "event": {
+    "type": "message",
+    "channel": "C01234",
+    "user": "U01234",
+    "text": "please sync the docs"
+  }
+}</textarea>
+        <div style="margin-top:12px"><button class="btn" id="btn-webhook-sl">Send webhook</button></div>
+        <div class="resp" id="resp-webhook-sl"></div>
+      </div>
+    </section>
+
+    <!-- ===== Webhook: Confluence ===== -->
+    <section id="page-webhook-cf" class="page">
+      <h1>Confluence Webhook</h1>
+      <p class="sub">Simulate a Confluence page update event.
+        <span class="badge">POST /webhooks/confluence</span></p>
+      <div class="card">
+        <label>Confluence webhook secret (optional)</label>
+        <input id="cf-secret" placeholder="optional" />
+        <label style="margin-top:10px">Payload (JSON)</label>
+        <textarea id="cf-payload" rows="12">{
+  "event": "page_updated",
+  "page": {
+    "id": "123456",
+    "title": "Engineering Handbook",
+    "space": {"key": "ENG"}
+  }
+}</textarea>
+        <div style="margin-top:12px"><button class="btn" id="btn-webhook-cf">Send webhook</button></div>
+        <div class="resp" id="resp-webhook-cf"></div>
+      </div>
+    </section>
+
+    <!-- ===== Connectors ===== -->
+    <section id="page-connectors" class="page">
+      <h1>Connectors</h1>
+      <p class="sub">
+        The exhaustive catalogue of sources oikb can sync from (from the official guide).
+        Each can be used as the <code>source:</code> value in <code>oikb.yaml</code> or via
+        <code>oikb sync &lt;source&gt;</code>. Use the prefix shown in the <b>Source syntax</b> column.
+      </p>
+      <div class="card">
+        <div class="kv" style="margin-bottom:14px">
+          <div class="k">Total connectors</div><div id="conn-total">—</div>
+        </div>
+        <div id="connectors-grid" class="grid grid-2"></div>
+      </div>
+      <div class="card">
+        <h2 style="margin:0 0 12px;border:0;padding:0">Source syntax &amp; required credentials</h2>
+        <table id="conn-auth-table">
+          <thead><tr><th>Prefix</th><th>Example</th><th>Required env vars</th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <div class="hint" style="margin-top:10px">Missing env vars in the <code>oikb</code> container cause the source to be silently skipped by the daemon.</div>
+      </div>
+    </section>
+
+    <!-- ===== Volumes ===== -->
+    <section id="page-volumes" class="page">
+      <h1>Volume Mounts</h1>
+      <p class="sub">
+        Bind-mount host directories into the <code>oikb</code> container so they
+        can be used as local filesystem sources. Adding a mount recreates the
+        container — syncing will briefly pause.
+      </p>
+
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+          <h2 style="margin:0;border:0;padding:0">Current bind mounts</h2>
+          <button class="btn secondary" id="btn-vol-refresh">Refresh</button>
+        </div>
+        <table id="volumes-table">
+          <thead><tr><th>Host path</th><th>Container path</th><th>Read-only</th></tr></thead>
+          <tbody><tr><td colspan="3" style="color:var(--muted)">Loading…</td></tr></tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <h2 style="margin:0 0 12px;border:0;padding:0">Add bind mount</h2>
+        <div class="grid grid-2">
+          <div><label>Host path *</label><input id="vol-host" placeholder="/home/user/my-docs" /></div>
+          <div><label>Container path *</label><input id="vol-container" placeholder="/data/my-docs" /></div>
+        </div>
+        <div style="margin-top:10px">
+          <label class="switch"><input type="checkbox" id="vol-readonly" checked /> Read-only mount</label>
+        </div>
+        <div class="hint" style="margin-top:8px">
+          Use a container path under <code>/data/</code> so the source can be referenced as
+          <code>./dirname</code> in <code>oikb.yaml</code>. The host path must exist.
+        </div>
+        <div style="margin-top:12px">
+          <button class="btn" id="btn-vol-add">Add &amp; recreate container</button>
+        </div>
+        <div class="resp" id="resp-vol"></div>
+      </div>
+    </section>
+
+    <!-- ===== Metrics ===== -->
+    <section id="page-metrics" class="page">
+      <h1>Prometheus Metrics</h1>
+      <p class="sub">Raw exposition from <span class="badge">GET /metrics</span> — counters, histograms and build info.</p>
+      <div class="card">
+        <button class="btn" id="btn-metrics">Fetch metrics</button>
+        <div class="resp" id="resp-metrics"></div>
+      </div>
+    </section>
+
+    <!-- ===== Info ===== -->
+    <section id="page-info" class="page">
+      <h1>Connection &amp; Info</h1>
+      <p class="sub">Orchestrator configuration and the full catalogue of daemon endpoints.</p>
+      <div class="card">
+        <div class="kv">
+          <div class="k">oikb URL</div><div id="info-url">—</div>
+          <div class="k">API key set</div><div id="info-key">—</div>
+          <div class="k">HTTP timeout</div><div id="info-timeout">—</div>
+        </div>
+      </div>
+      <div class="card">
+        <h2 style="margin:0 0 12px;border:0;padding:0">Daemon endpoints</h2>
+        <table id="endpoints-table"><thead><tr><th>Method</th><th>Path</th><th>Description</th></tr></thead><tbody></tbody></table>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ---------- helpers ---------- */
+const $ = (s, root=document) => root.querySelector(s);
+const $$ = (s, root=document) => Array.from(root.querySelectorAll(s));
+
+function toast(msg){
+  const t=$('#toast'); t.textContent=msg; t.classList.add('show');
+  clearTimeout(t._tm); t._tm=setTimeout(()=>t.classList.remove('show'),2600);
+}
+
+function renderResp(el, status, text, isPlain){
+  const ok = status>=200 && status<300;
+  const cls = ok ? 'ok' : (status>=500 ? 'err' : 'warn');
+  let pretty = text;
+  if(!isPlain){
+    try { pretty = JSON.stringify(JSON.parse(text), null, 2); }
+    catch { /* leave as-is */ }
+  }
+  el.innerHTML = `<div class="resp-bar">
+      <span>Response</span>
+      <span class="status ${cls}">HTTP ${status}</span>
+    </div>
+    <pre class="${isPlain?'plain':''}">${escapeHtml(pretty)}</pre>`;
+}
+function escapeHtml(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+
+async function callProxy(method, path, {params=null, json=null, body=null, headers=null}={}){
+  const opts = {method:'POST', headers:{'Content-Type':'application/json'}};
+  const payload = {method};
+  if(params) payload.params = params;
+  if(json!==null) payload.json = json;
+  if(body!==null) payload.body = body;
+  if(headers) payload.headers = headers;
+  opts.body = JSON.stringify(payload);
+  const r = await fetch(`/proxy${path}`, opts);
+  return r;
+}
+
+async function sendRequest(btn, respId, build){
+  const el = $('#'+respId);
+  el.innerHTML = `<div class="resp-bar"><span>Working…</span><span class="spinner" style="display:inline-block"></span></div>`;
+  btn.disabled = true;
+  try {
+    const req = build();
+    const r = await callProxy(req.method, req.path, req);
+    const text = await r.text();
+    let status = r.status;
+    let parsed = text, isPlain=false;
+    try { const j = JSON.parse(text);
+      if(j && typeof j==='object' && 'raw' in j && 'content_type' in j && !('error' in j)){
+        parsed = j.raw; isPlain = true; status = j.status || status;
+      } else {
+        parsed = JSON.stringify(j, null, 2);
+      }
+    } catch { /* leave text */ }
+    renderResp(el, status, parsed, isPlain);
+    toast('Done');
+  } catch(e){
+    renderResp(el, 0, 'Network error: '+e.message, true);
+    toast('Failed');
+  } finally { btn.disabled = false; }
+}
+
+/* ---------- nav ---------- */
+$$('.nav-item').forEach(li=>{
+  li.addEventListener('click', ()=>{
+    $$('.nav-item').forEach(n=>n.classList.remove('active'));
+    li.classList.add('active');
+    $$('.page').forEach(p=>p.classList.remove('active'));
+    $('#page-'+li.dataset.page).classList.add('active');
+  });
+});
+
+/* ---------- sources / config ---------- */
+let _config = null;
+let _sourceTypes = [];
+
+async function loadConfig(){
+  const r = await fetch('/config');
+  _config = await r.json();
+  return _config;
+}
+
+async function loadSourcesStatus(){
+  const tb = $('#sources-table tbody');
+  // merge config (source of truth) with live /health
+  let health = {};
+  try {
+    const r = await callProxy('GET','/health');
+    const data = await r.json();
+    if(data && data.raw){ health = JSON.parse(data.raw); }
+    else if(data && data.sources){ health = data; }
+  } catch { /* leave empty */ }
+  const sources = (_config && Array.isArray(_config.sources)) ? _config.sources : [];
+  if(_config && _config._error){
+    tb.innerHTML = `<tr><td colspan="8" style="color:var(--err)">${escapeHtml(_config._error)}</td></tr>`;
+    return;
+  }
+  if(!sources.length){
+    tb.innerHTML = `<tr><td colspan="8" style="color:var(--muted)">No sources configured in oikb.yaml</td></tr>`;
+    return;
+  }
+  // health.sources may be keyed by source path or name
+  const healthEntries = {};
+  if(health && health.sources && typeof health.sources==='object'){
+    for(const [k,v] of Object.entries(health.sources)){ healthEntries[k]=v; healthEntries[v && v.name]=v; }
+  }
+  tb.innerHTML='';
+  sources.forEach((s, i)=>{
+    const live = healthEntries[s.name] || healthEntries[s.source] || {};
+    const status = live.status || '—';
+    const statusCls = status==='ok' ? 'live' : (status==='error' ? 'off' : '');
+    const last = live.last_sync ? new Date(live.last_sync*1000).toLocaleString() : '—';
+    const next = live.next_sync_in ? ` (next in ${live.next_sync_in})` : '';
+    const err = live.error ? escapeHtml(String(live.error).slice(0,80)) : '—';
+    tb.insertAdjacentHTML('beforeend',
+      `<tr data-i="${i}">
+        <td><b>${escapeHtml(s.name||'')}</b></td>
+        <td><code>${escapeHtml(s.source||'')}</code></td>
+        <td><code>${escapeHtml(s['kb-id']||'')}</code></td>
+        <td>${escapeHtml(String(s.interval||'—'))}</td>
+        <td><span class="pill ${statusCls}">${escapeHtml(status)}</span></td>
+        <td>${escapeHtml(last)}${escapeHtml(next)}</td>
+        <td style="color:var(--err);max-width:260px;overflow:hidden;text-overflow:ellipsis">${err}</td>
+        <td>
+          <button class="btn ghost" data-edit="${i}" style="padding:4px 10px">Edit</button>
+          <button class="btn ghost" data-sync="${i}" style="padding:4px 10px">Sync</button>
+          <button class="btn ghost" data-del="${i}" style="padding:4px 10px">Del</button>
+        </td>
+      </tr>`);
+  });
+  // wire row buttons
+  $$('#sources-table tbody [data-edit]').forEach(b=>b.addEventListener('click',e=>editSource(+e.target.dataset.edit)));
+  $$('#sources-table tbody [data-sync]').forEach(b=>b.addEventListener('click',e=>syncSource(+e.target.dataset.sync)));
+  $$('#sources-table tbody [data-del]').forEach(b=>b.addEventListener('click',e=>delSource(+e.target.dataset.del)));
+}
+
+async function syncSource(i){
+  const s = _config.sources[i];
+  const id = s.name || s['kb-id'];
+  const el = $('#resp-run');
+  el.innerHTML = `<div class="resp-bar"><span>Running <code>oikb sync --kb-id ${escapeHtml(id)}</code>…</span><span class="spinner" style="display:inline-block"></span></div>`;
+  try {
+    const r = await fetch('/run/sync', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({name: id})
+    });
+    const res = await r.json();
+    renderCli(el, res);
+    toast(res.exit_code === 0 ? 'Sync done' : 'Sync failed');
+  } catch(e){
+    renderCli(el, {exit_code:-1, output:'Network error: '+e.message, command:'oikb sync'});
+    toast('Failed');
+  }
+  loadSourcesStatus();
+}
+
+function renderCli(el, res){
+  const ok = res.exit_code === 0;
+  const cls = ok ? 'ok' : 'err';
+  el.innerHTML = `<div class="resp-bar">
+      <span><code>${escapeHtml(res.command || '')}</code></span>
+      <span class="status ${cls}">exit ${res.exit_code}</span>
+    </div>
+    <pre class="plain">${escapeHtml(res.output || '(no output)')}</pre>`;
+}
+
+async function delSource(i){
+  if(!confirm('Delete source "'+_config.sources[i].name+'"?')) return;
+  _config.sources.splice(i,1);
+  await saveConfig();
+  loadSourcesStatus();
+}
+
+function editSource(i){
+  const s = _config.sources[i] || {};
+  $('#src-name').value = s.name||'';
+  const rawSource = s.source||'';
+  const typeId = detectSourceType(rawSource);
+  $('#src-source-type').value = typeId;
+  $('#src-source').value = stripSourcePrefix(rawSource, typeId);
+  const st = _sourceTypes.find(t => t.id === typeId);
+  $('#src-source').placeholder = st ? st.placeholder : 'owner/repo, bucket/key, …';
+  $('#src-kbid').value = s['kb-id']||'';
+  $('#src-interval').value = s.interval||'';
+  $('#src-branch').value = s.branch||'';
+  $('#src-path').value = s.path||'';
+  const f = s.filter||{};
+  $('#src-include').value = (f.include||[]).join(',');
+  $('#src-exclude').value = (f.exclude||[]).join(',');
+  updateFieldVisibility(typeId);
+  $('#src-add-form').style.display='block';
+  $('#src-add-form').dataset.editIndex = i;
+}
+
+$('#btn-src-add').addEventListener('click', ()=>{
+  $('#src-add-form').style.display='block';
+  $('#src-add-form').dataset.editIndex = '-1';
+  ['src-name','src-kbid','src-interval','src-branch','src-path','src-include','src-exclude']
+    .forEach(id=>$('#'+id).value='');
+  $('#src-source-type').value = 'local';
+  const st = _sourceTypes.find(t => t.id === 'local');
+  $('#src-source').value = '';
+  $('#src-source').placeholder = st ? st.placeholder : 'owner/repo, bucket/key, …';
+  updateFieldVisibility('local');
+});
+
+$('#btn-src-cancel').addEventListener('click', ()=>{ $('#src-add-form').style.display='none'; });
+
+$('#src-source-type').addEventListener('change', ()=>{
+  const typeId = $('#src-source-type').value;
+  const st = _sourceTypes.find(t => t.id === typeId);
+  $('#src-source').placeholder = st ? st.placeholder : 'owner/repo, bucket/key, …';
+  updateFieldVisibility(typeId);
+});
+
+$('#btn-src-save').addEventListener('click', async ()=>{
+  if(!_config || _config._error) _config = {sources:[]};
+  if(!Array.isArray(_config.sources)) _config.sources = [];
+  const typeId = $('#src-source-type').value;
+  const prefix = getSourceTypePrefix(typeId);
+  let srcVal = $('#src-source').value.trim();
+  if (prefix && srcVal.startsWith(prefix)) srcVal = srcVal.slice(prefix.length);
+  if (typeId === 'website' && !/^https?:\/\//.test(srcVal)) srcVal = 'https://' + srcVal;
+  const src = {
+    name: $('#src-name').value.trim(),
+    source: prefix + srcVal,
+    'kb-id': $('#src-kbid').value.trim(),
+  };
+  if(!src.name || !src.source || !src['kb-id']){ toast('name, source and kb-id are required'); return; }
+  if($('#src-interval').value.trim()) src.interval = $('#src-interval').value.trim();
+  if($('#src-branch').value.trim()) src.branch = $('#src-branch').value.trim();
+  if($('#src-path').value.trim()) src.path = $('#src-path').value.trim();
+  const inc = $('#src-include').value.split(',').map(s=>s.trim()).filter(Boolean);
+  const exc = $('#src-exclude').value.split(',').map(s=>s.trim()).filter(Boolean);
+  if(inc.length || exc.length) src.filter = {...(inc.length?{include:inc}:{}), ...(exc.length?{exclude:exc}:{})};
+  const idx = +$('#src-add-form').dataset.editIndex;
+  if(idx>=0) _config.sources[idx] = src; else _config.sources.push(src);
+  await saveConfig();
+  $('#src-add-form').style.display='none';
+  loadSourcesStatus();
+});
+
+async function saveConfig(){
+  const r = await fetch('/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(_config)});
+  const res = await r.json();
+  if(r.ok) toast('oikb.yaml saved'); else toast('Save failed: '+(res.error||''));
+  await loadConfig();
+}
+
+$('#btn-src-refresh').addEventListener('click', async ()=>{ await loadConfig(); loadSourcesStatus(); });
+
+$('#btn-run-all').addEventListener('click', async ()=>{
+  const el = $('#resp-run');
+  el.innerHTML = `<div class="resp-bar"><span>Running <code>oikb sync</code> (all sources)…</span><span class="spinner" style="display:inline-block"></span></div>`;
+  try {
+    const r = await fetch('/run/sync', {method:'POST', headers:{'Content-Type':'application/json'}, body:'{}'});
+    const res = await r.json();
+    renderCli(el, res);
+    toast(res.exit_code === 0 ? 'Sync done' : 'Sync failed');
+  } catch(e){ renderCli(el, {exit_code:-1, output:'Network error: '+e.message, command:'oikb sync'}); toast('Failed'); }
+  loadSourcesStatus();
+});
+
+$('#btn-run-validate').addEventListener('click', async ()=>{
+  const el = $('#resp-run');
+  el.innerHTML = `<div class="resp-bar"><span>Running <code>oikb validate --deep</code>…</span><span class="spinner" style="display:inline-block"></span></div>`;
+  try {
+    const r = await fetch('/run/validate', {method:'POST'});
+    const res = await r.json();
+    renderCli(el, res);
+    toast(res.exit_code === 0 ? 'Config valid' : 'Validation failed');
+  } catch(e){ renderCli(el, {exit_code:-1, output:'Network error: '+e.message, command:'oikb validate --deep'}); toast('Failed'); }
+});
+
+/* ---------- connectors ---------- */
+async function loadConnectors(){
+  const r = await fetch('/connectors'); const data = await r.json();
+  $('#conn-total').textContent = data.total + ' connectors across ' + data.categories.length + ' categories';
+  const grid = $('#connectors-grid'); grid.innerHTML='';
+  data.categories.forEach(cat=>{
+    grid.insertAdjacentHTML('beforeend',
+      `<div style="background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:14px">
+        <div style="font-weight:600;margin-bottom:8px;color:#fff">${escapeHtml(cat.category)} <span class="pill">${cat.sources.length}</span></div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px">
+          ${cat.sources.map(s=>`<span class="badge" style="padding:3px 8px;font-size:11px">${escapeHtml(s)}</span>`).join('')}
+        </div>
+      </div>`);
+  });
+  const authMap = {
+    github:['GITHUB_TOKEN (private repos)'],
+    gitlab:['GITLAB_TOKEN'],
+    bitbucket:['BITBUCKET_TOKEN'],
+    confluence:['CONFLUENCE_URL','CONFLUENCE_USERNAME','CONFLUENCE_API_TOKEN'],
+    s3:['AWS credentials'],
+    gcs:['Google service account'],
+    azure:['Azure storage credentials'],
+    sharepoint:['SHAREPOINT_TENANT_ID','SHAREPOINT_CLIENT_ID','SHAREPOINT_CLIENT_SECRET or SHAREPOINT_CERTIFICATE_PATH'],
+    nextcloud:['NEXTCLOUD_URL','NEXTCLOUD_USER','NEXTCLOUD_PASSWORD'],
+  };
+  const tb = $('#conn-auth-table tbody'); tb.innerHTML='';
+  Object.entries(authMap).forEach(([prefix,vars])=>{
+    tb.insertAdjacentHTML('beforeend',
+      `<tr><td><code>${prefix}:</code></td>
+       <td><code>${prefix}:owner/repo</code> or <code>${prefix}://bucket/prefix</code></td>
+       <td>${vars.map(v=>`<span class="badge">${escapeHtml(v)}</span>`).join(' ')}</td></tr>`);
+  });
+}
+
+/* ---------- source type dropdown ---------- */
+async function loadSourceTypes(){
+  try {
+    const r = await fetch('/source-types');
+    const data = await r.json();
+    _sourceTypes = data.types || [];
+  } catch { _sourceTypes = []; }
+  const sel = $('#src-source-type');
+  sel.innerHTML = '<option value="">— Select source type —</option>';
+  _sourceTypes.forEach(st => {
+    sel.insertAdjacentHTML('beforeend', `<option value="${st.id}">${escapeHtml(st.label)}</option>`);
+  });
+}
+
+function detectSourceType(source){
+  if (!source) return 'local';
+  for (const st of _sourceTypes) {
+    if (st.prefix && source.startsWith(st.prefix)) return st.id;
+  }
+  if (/^https?:\/\//.test(source)) return 'website';
+  if (/^\.?\//.test(source)) return 'local';
+  return _sourceTypes.length ? _sourceTypes[_sourceTypes.length-1].id : 'custom';
+}
+
+function stripSourcePrefix(source, typeId){
+  const st = _sourceTypes.find(t => t.id === typeId);
+  if (st && st.prefix && source.startsWith(st.prefix)) return source.slice(st.prefix.length);
+  if (typeId === 'website' && /^https?:\/\//.test(source)) return source.replace(/^https?:\/\//, '');
+  return source;
+}
+
+function getSourceTypePrefix(typeId){
+  const st = _sourceTypes.find(t => t.id === typeId);
+  return st ? st.prefix : '';
+}
+
+function updateFieldVisibility(typeId){
+  const st = _sourceTypes.find(t => t.id === typeId);
+  const fields = st ? (st.extra_fields || []) : [];
+  const br = $('#field-group-branch');
+  const pa = $('#field-group-path');
+  if (br) br.style.display = fields.includes('branch') ? '' : 'none';
+  if (pa) pa.style.display = fields.includes('path') ? '' : 'none';
+}
+
+/* ---------- info ---------- */
+async function loadInfo(){
+  try {
+    const r = await fetch('/info'); const info = await r.json();
+    $('#oikb-url').textContent = info.oikb_url;
+    $('#info-url').textContent = info.oikb_url;
+    $('#info-timeout').textContent = info.timeout + 's';
+    const keyTxt = info.has_api_key ? 'configured (hidden)' : 'not set';
+    $('#oikb-key').textContent = keyTxt;
+    $('#info-key').textContent = keyTxt;
+    $('#daemon-info').textContent = info.oikb_url;
+    const tb = $('#endpoints-table tbody'); tb.innerHTML='';
+    info.endpoints.forEach(e=>{
+      tb.insertAdjacentHTML('beforeend',
+        `<tr><td><span class="badge">${e.method}</span></td><td>${e.path}</td><td>${e.desc}</td></tr>`);
+    });
+  } catch(e){ $('#daemon-info').textContent = 'orchestrator error'; }
+}
+
+/* ---------- health / connectivity ---------- */
+async function checkLive(){
+  const pill = $('#pill-live');
+  try {
+    const r = await callProxy('GET','/health/ready');
+    pill.className = 'pill ' + (r.ok ? 'live' : 'off');
+    pill.textContent = r.ok ? 'reachable' : 'unreachable';
+  } catch {
+    pill.className='pill off'; pill.textContent='unreachable';
+  }
+}
+
+$('#btn-health').addEventListener('click', e=>{
+  const path = $('#health-endpoint').value;
+  sendRequest(e.target, 'resp-health', ()=>({method:'GET', path}));
+});
+
+/* ---------- sync ---------- */
+$('#btn-sync').addEventListener('click', e=>{
+  const id = $('#sync-id').value.trim();
+  if(!id){ toast('Source name or kb-id is required'); return; }
+  const dry = $('#sync-dry').checked;
+  sendRequest(e.target, 'resp-sync', ()=>({
+    method:'POST',
+    path:`/sync/${encodeURIComponent(id)}`,
+    params: dry ? {dry_run:'true'} : null
+  }));
+});
+
+$('#btn-health-fill').addEventListener('click', async e=>{
+  e.target.disabled = true;
+  try {
+    await loadConfig();
+    const names = (_config.sources||[]).map(s=>s.name);
+    if(names.length){ $('#sync-id').value = names[0]; toast('Loaded '+names.length+' sources'); }
+    else toast('No sources configured');
+  } finally { e.target.disabled = false; }
+});
+
+/* ---------- local directory sync ---------- */
+async function browseDir(path){
+  const r = await fetch('/browse', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({path})
+  });
+  return r.json();
+}
+
+async function loadDirectory(path){
+  $('#local-path').value = path;
+  const container = $('#local-contents');
+  container.innerHTML = '<div style="padding:10px 14px;color:var(--muted)"><span class="spinner" style="display:inline-block;margin-right:8px"></span>Loading…</div>';
+  try {
+    const data = await browseDir(path);
+    if(data.error){
+      container.innerHTML = `<div style="padding:10px 14px;color:var(--err)">${escapeHtml(data.error)}</div>`;
+      return;
+    }
+    // Auto-fill name & container path
+    const parts = path.replace(/\/$/, '').split('/').filter(Boolean);
+    const dirName = parts.length ? parts[parts.length-1] : 'docs';
+    if(!$('#local-name').value) $('#local-name').value = dirName;
+    $('#local-container').value = '/data/' + dirName;
+
+    let html = '';
+    if(data.parent){
+      html += `<div data-path="${escapeHtml(data.parent)}" class="loc-item loc-parent"
+        style="padding:6px 14px;cursor:pointer;border-radius:0;color:var(--accent);font-weight:500"
+        onmouseover="this.style.background='var(--panel2)'" onmouseout="this.style.background=''">
+        … /</div>`;
+    }
+    let dirs = data.items.filter(i => i.is_dir);
+    let files = data.items.filter(i => !i.is_dir);
+    dirs.forEach(item => {
+      const fullPath = path === '/' ? '/' + item.name : path + '/' + item.name;
+      html += `<div data-path="${escapeHtml(fullPath)}" class="loc-item loc-dir"
+        style="padding:6px 14px;cursor:pointer;border-radius:0;display:flex;align-items:center;gap:8px"
+        onmouseover="this.style.background='var(--panel2)'" onmouseout="this.style.background=''">
+        <span style="color:var(--accent)">▸</span> ${escapeHtml(item.name)}/</div>`;
+    });
+    if(!dirs.length && !files.length){
+      html += '<div style="padding:10px 14px;color:var(--muted)">(empty directory)</div>';
+    } else if(!dirs.length){
+      html += '<div style="padding:6px 14px;color:var(--muted);font-style:italic">(no subdirectories)</div>';
+    }
+    if(files.length){
+      html += '<div style="padding:6px 14px 2px;color:var(--muted);font-size:11px;border-top:1px solid var(--border);margin-top:4px">Files (' + files.length + ')</div>';
+      files.slice(0, 20).forEach(item => {
+        html += `<div style="padding:3px 14px;color:var(--muted);display:flex;align-items:center;gap:8px;font-size:12px">
+          <span style="opacity:.4">∙</span> ${escapeHtml(item.name)}</div>`;
+      });
+      if(files.length > 20){
+        html += `<div style="padding:3px 14px;color:var(--muted);font-size:11px">… and ${files.length - 20} more</div>`;
+      }
+    }
+    container.innerHTML = html;
+    container.querySelectorAll('.loc-item').forEach(el => {
+      el.addEventListener('click', ()=>loadDirectory(el.dataset.path));
+    });
+  } catch(e){
+    container.innerHTML = `<div style="padding:10px 14px;color:var(--err)">${escapeHtml(e.message)}</div>`;
+  }
+}
+
+$('#btn-local-browse').addEventListener('click', ()=>{
+  const path = $('#local-path').value.trim() || '/';
+  loadDirectory(path);
+});
+
+$('#btn-local-up').addEventListener('click', ()=>{
+  const path = $('#local-path').value.trim() || '/';
+  if(path === '/') return;
+  const parent = path.replace(/\/$/, '').split('/').slice(0, -1).join('/') || '/';
+  loadDirectory(parent);
+});
+
+$('#local-path').addEventListener('keydown', e=>{
+  if(e.key === 'Enter'){
+    const path = $('#local-path').value.trim() || '/';
+    loadDirectory(path);
+  }
+});
+
+$('#local-path').addEventListener('input', ()=>{
+  const path = $('#local-path').value.trim();
+  const parts = path.replace(/\/$/, '').split('/').filter(Boolean);
+  const dirName = parts.length ? parts[parts.length-1] : 'docs';
+  if(!$('#local-name').value) $('#local-name').value = dirName;
+  $('#local-container').value = '/data/' + dirName;
+});
+
+$('#btn-local-sync').addEventListener('click', async ()=>{
+  const hostPath = $('#local-path').value.trim();
+  const name = $('#local-name').value.trim();
+  const kbId = $('#local-kbid').value.trim();
+  const containerPath = $('#local-container').value.trim();
+  if(!hostPath || !name || !kbId){ toast('Host path, name and KB ID are required'); return; }
+
+  const resp = $('#resp-local-sync');
+  const btn = $('#btn-local-sync');
+  btn.disabled = true;
+  const setStatus = (msg)=>{
+    resp.innerHTML = `<div class="resp-bar"><span>${msg}</span><span class="spinner" style="display:inline-block"></span></div>`;
+  };
+
+  try {
+    // Step 1 — mount volume (409 = already exists, that's OK)
+    setStatus('Step 1/3: Adding volume mount…');
+    const volR = await fetch('/volumes', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({host_path: hostPath, container_path: containerPath, read_only: true})
+    });
+    const volData = await volR.json();
+    if(!volR.ok && !(volData.error && volData.error.includes('already exists'))){
+      resp.innerHTML = `<div class="resp-bar"><span class="status err">Failed at step 1 (volume mount)</span></div><pre class="plain">${escapeHtml(JSON.stringify(volData, null, 2))}</pre>`;
+      toast('Failed');
+      return;
+    }
+
+    // Step 2 — add source to config
+    setStatus('Step 2/3: Adding source to config…');
+    await loadConfig();
+    if(!_config || _config._error) _config = {sources:[]};
+    if(!Array.isArray(_config.sources)) _config.sources = [];
+    // Avoid duplicating an identical source
+    const exists = _config.sources.some(s => s.name === name || (s['kb-id'] === kbId));
+    if(!exists){
+      _config.sources.push({
+        name: name,
+        source: containerPath,
+        'kb-id': kbId,
+      });
+    }
+    const cfgR = await fetch('/config', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(_config)
+    });
+    const cfgData = await cfgR.json();
+    if(!cfgR.ok){
+      resp.innerHTML = `<div class="resp-bar"><span class="status err">Failed at step 2 (config save)</span></div><pre class="plain">${escapeHtml(JSON.stringify(cfgData, null, 2))}</pre>`;
+      toast('Failed');
+      return;
+    }
+
+    // Step 3 — trigger sync
+    setStatus('Step 3/3: Triggering sync…');
+    const syncR = await fetch('/run/sync', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({name: name})
+    });
+    const syncData = await syncR.json();
+    renderCli(resp, syncData);
+    toast(syncData.exit_code === 0 ? 'Sync complete' : 'Sync finished with issues');
+
+    // Refresh sources table
+    await loadConfig();
+    loadSourcesStatus();
+  } catch(e){
+    resp.innerHTML = `<div class="resp-bar"><span class="status err">Error</span></div><pre class="plain">${escapeHtml(e.message)}</pre>`;
+    toast('Failed');
+  } finally { btn.disabled = false; }
+});
+
+/* ---------- history ---------- */
+$('#btn-history').addEventListener('click', e=>{
+  const params = {};
+  const kb = $('#hist-kb').value.trim();
+  if(kb) params.kb = kb;
+  if($('#hist-errors').checked) params.errors = 'true';
+  sendRequest(e.target, 'resp-history', ()=>({method:'GET', path:'/history', params}));
+});
+
+/* ---------- webhooks ---------- */
+$('#btn-webhook-gh').addEventListener('click', e=>{
+  sendRequest(e.target, 'resp-webhook-gh', ()=>({
+    method:'POST', path:'/webhooks/github', body:$('#gh-payload').value,
+    headers:{'X-GitHub-Event':$('#gh-event').value, 'X-Hub-Signature-256':$('#gh-sig').value}
+  }));
+});
+$('#btn-webhook-gl').addEventListener('click', e=>{
+  sendRequest(e.target, 'resp-webhook-gl', ()=>({
+    method:'POST', path:'/webhooks/gitlab', body:$('#gl-payload').value,
+    headers:{'X-Gitlab-Event':$('#gl-event').value, 'X-Gitlab-Token':$('#gl-token').value}
+  }));
+});
+$('#btn-webhook-sl').addEventListener('click', e=>{
+  sendRequest(e.target, 'resp-webhook-sl', ()=>({
+    method:'POST', path:'/webhooks/slack', body:$('#sl-payload').value,
+    headers:{'X-Slack-Signature':$('#sl-secret').value}
+  }));
+});
+$('#btn-webhook-cf').addEventListener('click', e=>{
+  sendRequest(e.target, 'resp-webhook-cf', ()=>({
+    method:'POST', path:'/webhooks/confluence', body:$('#cf-payload').value,
+    headers:{'X-Confluence-Secret':$('#cf-secret').value}
+  }));
+});
+
+/* ---------- volumes ---------- */
+async function loadVolumes(){
+  const tb = $('#volumes-table tbody');
+  try {
+    const r = await fetch('/volumes');
+    const data = await r.json();
+    if (!r.ok) { tb.innerHTML = `<tr><td colspan="3" style="color:var(--err)">${escapeHtml(data.error||'Failed')}</td></tr>`; return; }
+    const mounts = data.mounts || [];
+    if (!mounts.length) { tb.innerHTML = '<tr><td colspan="3" style="color:var(--muted)">No bind mounts configured</td></tr>'; return; }
+    tb.innerHTML = '';
+    mounts.forEach(m => {
+      tb.insertAdjacentHTML('beforeend',
+        `<tr><td><code>${escapeHtml(m.host_path)}</code></td><td><code>${escapeHtml(m.container_path)}</code></td><td>${m.read_only ? 'yes' : 'no'}</td></tr>`);
+    });
+  } catch(e) {
+    tb.innerHTML = `<tr><td colspan="3" style="color:var(--err)">${escapeHtml(e.message)}</td></tr>`;
+  }
+}
+
+$('#btn-vol-refresh').addEventListener('click', loadVolumes);
+
+$('#btn-vol-add').addEventListener('click', async ()=>{
+  const hostPath = $('#vol-host').value.trim();
+  const containerPath = $('#vol-container').value.trim();
+  if (!hostPath || !containerPath) { toast('Host path and container path are required'); return; }
+  const btn = $('#btn-vol-add');
+  const resp = $('#resp-vol');
+  resp.innerHTML = '<div class="resp-bar"><span>Recreating container…</span><span class="spinner" style="display:inline-block"></span></div>';
+  btn.disabled = true;
+  try {
+    const r = await fetch('/volumes', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({host_path: hostPath, container_path: containerPath, read_only: $('#vol-readonly').checked})
+    });
+    const data = await r.json();
+    const ok = r.ok;
+    resp.innerHTML = `<div class="resp-bar"><span class="status ${ok?'ok':'err'}">${ok?'Done':'Error'}</span></div><pre class="plain">${escapeHtml(JSON.stringify(data, null, 2))}</pre>`;
+    if(ok) toast('Container recreated with new mount');
+    loadVolumes();
+  } catch(e) {
+    resp.innerHTML = `<div class="resp-bar"><span class="status err">Error</span></div><pre class="plain">${escapeHtml(e.message)}</pre>`;
+    toast('Failed');
+  } finally { btn.disabled = false; }
+});
+
+/* ---------- init ---------- */
+loadInfo();
+loadConnectors();
+loadSourceTypes();
+loadConfig().then(loadSourcesStatus);
+checkLive(); setInterval(checkLive, 30000);
+
+/* ---------- metrics ---------- */
+$('#btn-metrics').addEventListener('click', e=>{
+  sendRequest(e.target, 'resp-metrics', ()=>({method:'GET', path:'/metrics'}));
+});
+</script>
+</body>
+</html>

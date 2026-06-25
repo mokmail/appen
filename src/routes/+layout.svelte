@@ -49,6 +49,7 @@
 
 	import '../tailwind.css';
 	import '../app.css';
+	import '$lib/bev-theme.css';
 	import 'tippy.js/dist/tippy.css';
 
 	import { executeToolServer, getBackendConfig, getModels, getVersion } from '$lib/apis';
@@ -498,10 +499,10 @@
 
 			if ($isLastActiveTab) {
 				if ($settings?.notificationEnabled ?? false) {
-					new Notification(`${data.title} • Open WebUI`, {
-						body: timeStr,
-						icon: `${WEBUI_BASE_URL}/static/favicon.png`
-					});
+				new Notification(`${data.title} • ${$WEBUI_NAME}`, {
+					body: timeStr,
+					icon: `${WEBUI_BASE_URL}/static/favicon.png`
+				});
 				}
 			}
 			return;
@@ -629,10 +630,10 @@
 
 					if ($isLastActiveTab) {
 						if ($settings?.notificationEnabled ?? false) {
-							new Notification(`${displayTitle} • Open WebUI`, {
-								body: content,
-								icon: `${WEBUI_BASE_URL}/static/favicon.png`
-							});
+						new Notification(`${displayTitle} • ${$WEBUI_NAME}`, {
+							body: content,
+							icon: `${WEBUI_BASE_URL}/static/favicon.png`
+						});
 						}
 					}
 
@@ -737,10 +738,10 @@
 
 				if ($isLastActiveTab) {
 					if ($settings?.notificationEnabled ?? false) {
-						new Notification(`${title} • Open WebUI`, {
-							body: data?.content,
-							icon: `${WEBUI_API_BASE_URL}/users/${data?.user?.id}/profile/image`
-						});
+					new Notification(`${title} • ${$WEBUI_NAME}`, {
+						body: data?.content,
+						icon: `${WEBUI_API_BASE_URL}/users/${data?.user?.id}/profile/image`
+					});
 					}
 				}
 
@@ -804,18 +805,22 @@
 			theme.set(newTheme);
 
 			// Apply theme classes (mirrors logic from chat/Settings/General.svelte)
-			const themes = ['dark', 'light', 'oled-dark'];
+			const themes = ['dark', 'light', 'oled-dark', 'bev'];
 			let themeToApply =
 				newTheme === 'oled-dark' ? 'dark' : newTheme === 'her' ? 'light' : newTheme;
-			if (newTheme === 'system') {
+			if (newTheme === 'system' || newTheme === 'bev') {
 				themeToApply = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 			}
 			themes
-				.filter((e) => e !== themeToApply)
+				.filter((e) => e !== themeToApply && e !== 'bev')
 				.forEach((e) => {
 					e.split(' ').forEach((cls) => document.documentElement.classList.remove(cls));
 				});
+			document.documentElement.classList.remove('bev');
 			themeToApply.split(' ').forEach((cls) => document.documentElement.classList.add(cls));
+			if (newTheme === 'bev') {
+				document.documentElement.classList.add('bev');
+			}
 			return;
 		}
 		if (event.type === 'models:refresh') {
@@ -868,7 +873,7 @@
 
 	const windowMessageEventHandler = async (event) => {
 		if (
-			!['https://openwebui.com', 'https://www.openwebui.com', 'http://localhost:9999'].includes(
+			!['http://localhost:9999'].includes(
 				event.origin
 			)
 		) {

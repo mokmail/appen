@@ -452,7 +452,7 @@
 			id="sidebar-chat-item"
 			class=" w-full flex justify-between rounded-xl px-[11px] py-[6px] {id === $chatId ||
 			confirmEdit
-				? 'bg-gray-100 dark:bg-gray-900 selected'
+				? 'bev-chat-active'
 				: selected
 					? 'bg-gray-100 dark:bg-gray-950 selected'
 					: 'group-hover:bg-gray-100 dark:group-hover:bg-gray-950'}  whitespace-nowrap text-ellipsis relative {generating
@@ -488,7 +488,7 @@
 			id="sidebar-chat-item"
 			class=" w-full flex justify-between rounded-xl px-[11px] py-[6px] {id === $chatId ||
 			confirmEdit
-				? 'bg-gray-100 dark:bg-gray-900 selected'
+				? 'bev-chat-active'
 				: selected
 					? 'bg-gray-100 dark:bg-gray-950 selected'
 					: ' group-hover:bg-gray-100 dark:group-hover:bg-gray-950'}  whitespace-nowrap text-ellipsis"
@@ -534,7 +534,7 @@
 			<div class="flex self-center flex-1 w-full min-w-0">
 				{#if unread}
 					<div class="shrink-0 self-center pr-2.5 flex transition-opacity duration-300">
-						<div class="size-1.5 bg-sky-500 rounded-full" />
+						<div class="size-1.5 bg-blue-500 dark:bg-blue-400 rounded-full bev-pulse" />
 					</div>
 				{/if}
 				<div
@@ -547,9 +547,9 @@
 				</div>
 			</div>
 
-			<!-- Time ago indicator -->
+			<!-- Time ago indicator — monospace metrology vernacular -->
 			{#if createdAt && !mouseOver}
-				<div class="shrink-0 self-center text-[10px] text-gray-400 dark:text-gray-500 pl-2">
+				<div class="shrink-0 self-center bev-data pl-2">
 					{formatTimeAgo(createdAt)}
 				</div>
 			{/if}

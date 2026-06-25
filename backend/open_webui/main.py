@@ -2854,11 +2854,11 @@ async def get_manifest_json():
     else:
         return {
             'name': app.state.WEBUI_NAME,
-            'short_name': app.state.WEBUI_NAME,
-            'description': f'{app.state.WEBUI_NAME} is an open, extensible, user-friendly interface for AI that adapts to your workflow.',
+            'short_name': 'BEV',
+            'description': f'{app.state.WEBUI_NAME} — KI-Plattform des Bundesamtes für Eich- und Vermessungswesen.',
             'start_url': '/',
             'display': 'standalone',
-            'background_color': '#343541',
+            'background_color': '#1a2530',
             'icons': [
                 {
                     'src': '/static/logo.png',
