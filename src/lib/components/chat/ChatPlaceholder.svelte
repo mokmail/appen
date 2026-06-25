@@ -12,6 +12,7 @@
 	import { sanitizeResponseContent } from '$lib/utils';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import EyeSlash from '$lib/components/icons/EyeSlash.svelte';
+	import ContourBackground from '$lib/components/common/ContourBackground.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -36,8 +37,14 @@
 </script>
 
 {#key mounted}
-	<div class="m-auto w-full max-w-6xl px-8 lg:px-20">
-		<div class="flex justify-start">
+	<div class="relative m-auto w-full max-w-6xl px-8 lg:px-20">
+		<!-- Kartografisch signature: ambient topographic contour motif -->
+		<ContourBackground
+			className="absolute -inset-x-20 -top-10 size-[calc(100%+10rem)] max-h-[28rem] opacity-[0.5] pointer-events-none bev-rise"
+			density="standard"
+		/>
+
+		<div class="relative flex justify-start bev-rise">
 			<div class="flex -space-x-4 mb-0.5" in:fade={{ duration: 200 }}>
 				{#each models as model, modelIdx}
 					<button
@@ -76,16 +83,22 @@
 				className="w-full flex justify-start mb-0.5"
 				placement="top"
 			>
-				<div class="flex items-center gap-2 text-gray-500 text-lg mt-2 w-fit">
+				<div class="relative flex items-center gap-2 text-gray-500 text-lg mt-2 w-fit">
 					<EyeSlash strokeWidth="2.5" className="size-5" />{$i18n.t('Temporary Chat')}
 				</div>
 			</Tooltip>
 		{/if}
 
 		<div
-			class=" mt-2 mb-4 text-3xl text-gray-800 dark:text-gray-100 text-left flex items-center gap-4 font-primary"
+			class="relative mt-2 mb-4 text-3xl text-gray-800 dark:text-gray-100 text-left flex items-center gap-4 font-primary bev-rise bev-rise-2"
 		>
 			<div>
+				<!-- Metrology data eyebrow — the surveying vernacular, not decoration -->
+				{#if models[selectedModelIdx]?.name}
+					<div class="bev-data mb-1.5">Modell · {models[selectedModelIdx]?.id}</div>
+				{:else}
+					<div class="bev-data mb-1.5">BEV · KI-Plattform</div>
+				{/if}
 				<div class=" capitalize line-clamp-1" in:fade={{ duration: 200 }}>
 					{#if models[selectedModelIdx]?.name}
 						{models[selectedModelIdx]?.name}
@@ -112,7 +125,7 @@
 								By
 								{#if models[selectedModelIdx]?.info?.meta?.user.community}
 									<a
-										href="https://openwebui.com/m/{models[selectedModelIdx]?.info?.meta?.user
+										href="https://bev.gv.at/m/{models[selectedModelIdx]?.info?.meta?.user
 											.username}"
 										>{models[selectedModelIdx]?.info?.meta?.user.name
 											? models[selectedModelIdx]?.info?.meta?.user.name
@@ -132,7 +145,7 @@
 			</div>
 		</div>
 
-		<div class=" w-full font-primary" in:fade={{ duration: 200, delay: 300 }}>
+		<div class="relative w-full font-primary bev-rise bev-rise-3" in:fade={{ duration: 200, delay: 300 }}>
 			<Suggestions
 				className="grid grid-cols-2"
 				suggestionPrompts={atSelectedModel?.info?.meta?.suggestion_prompts ??

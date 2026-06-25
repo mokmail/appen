@@ -1281,31 +1281,36 @@ except Exception as e:
 if default_prompt_suggestions == []:
     default_prompt_suggestions = [
         {
-            'title': ['Help me study', 'vocabulary for a college entrance exam'],
-            'content': "Help me study vocabulary: write a sentence for me to fill in the blank, and I'll try to pick the correct option.",
+            'title': ['Organisation des BEV', 'Wie ist das BEV aufgebaut?'],
+            'content': 'Wie ist das Bundesamt für Eich- und Vermessungswesen organisatorisch aufgebaut? Beschreibe die Gruppen und Hauptabteilungen.',
         },
         {
-            'title': ['Give me ideas', "for what to do with my kids' art"],
-            'content': "What are 5 creative things I could do with my kids' art? I don't want to throw them away, but it's also so much clutter.",
+            'title': ['Aufgaben des Eichwesens', 'Was macht die Gruppe Eichwesen?'],
+            'content': 'Welche Aufgaben hat die Gruppe Eichwesen des BEV? Erkläre die Rolle als nationales Metrologie-Institut und Eichbehörde.',
         },
         {
-            'title': ['Tell me a fun fact', 'about the Roman Empire'],
-            'content': 'Tell me a random fun fact about the Roman Empire',
+            'title': ['Geoinformation & Kataster', 'Wofür ist die Gruppe Grundlagen und Geoinformation zuständig?'],
+            'content': 'Wofür ist die Gruppe Grundlagen und Geoinformation beim BEV zuständig? Nenne die Abteilungen und ihre Kernaufgaben.',
         },
         {
-            'title': ['Show me a code snippet', "of a website's sticky header"],
-            'content': "Show me a code snippet of a website's sticky header in CSS and JavaScript.",
+            'title': ['Marktüberwachung', 'Was sind die Aufgaben der Marktüberwachung?'],
+            'content': 'Welche Aufgaben übernimmt die Gruppe Marktüberwachung des BEV? Erkläre die Funktionsweise und die Fachbereiche.',
         },
         {
-            'title': [
-                'Explain options trading',
-                "if I'm familiar with buying and selling stocks",
-            ],
-            'content': "Explain options trading in simple terms if I'm familiar with buying and selling stocks.",
+            'title': ['IT-Strategie & CIO', 'Wie ist die IT am BEV organisiert?'],
+            'content': 'Wie ist die IT-Organisation am BEV aufgebaut? Beschreibe die Stabsabteilung IT-Strategie und Steuerung sowie die IT-Infrastruktur.',
         },
         {
-            'title': ['Overcome procrastination', 'give me tips'],
-            'content': 'Could you start by asking me about instances when I procrastinate the most and then give me some suggestions to overcome it?',
+            'title': ['Präsidium & Verwaltung', 'Was macht das Präsidium?'],
+            'content': 'Welche zentralen Serviceleistungen erbringt das Präsidium des BEV? Erkläre die Abteilungen Personal, Finanz, Recht und Kundenservice.',
+        },
+        {
+            'title': ['Kalibrierung & Etalons', 'Was sind nationale Etalons?'],
+            'content': 'Was sind nationale Etalons und wie stellt das BEV die Maßeinheiten dar? Erkläre die internationale Anbindung der Kalibrierungen.',
+        },
+        {
+            'title': ['Vermessungsämter', 'Was tun die Vermessungsämter?'],
+            'content': 'Welche Kerntätigkeiten haben die Vermessungsämter des BEV? Beschreibe ihre Rolle im Kataster und in der Staatsgrenzvermessung.',
         },
     ]
 

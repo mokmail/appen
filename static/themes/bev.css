@@ -1,0 +1,221 @@
+/* BEV Theme — Bundesamt für Eich- und Vermessungswesen
+   Based on:
+   - Styleguide 4.0 Corporate Design des Bundes (Rot #e1320f, Schwarz #000, Blaugrau, Sandgrau)
+   - Webseiten-Styleguide Corporate Design des Bundes (Taubenblau #286f9c, field/table neutrals)
+   All color contrasts meet WCAG-AA (4.5:1) per the federal guidelines. */
+
+.bev {
+	/* === Text colors === */
+	--color-text-01: #000000; /* Standard-Text */
+	--color-text-02: #4d4d4d; /* Sekundärtext, 70% text-01 */
+	--color-text-03: #757575; /* Disabled / tertiary */
+	--color-text-inverse: #ffffff; /* Text auf farbigen Hintergründen */
+
+	/* === Background surfaces (light) === */
+	--color-bg-standard: #ffffff; /* Standard-Hintergrund (field-02 / inverse-01) */
+	--color-bg-field: #f0f4f5; /* field-01 — Tabellen, Eingabefelder */
+	--color-bg-table: #e5ecee; /* Tabellenhintergrund */
+	--color-bg-block: #e9e3df; /* Blockhintergrund, Formularlinien */
+	--color-bg-blaugrau: #d9e3e8; /* Blaugrau (CD 4.0 Funktionsfarbe) */
+	--color-bg-blaugrau-hell: #e4ebf0; /* Blaugrau hell */
+	--color-bg-blaugrau-heller: #eff4f7; /* Blaugrau heller — Hauptbackground light */
+	--color-bg-sandgrau: #e9e4df; /* Sandgrau (CD 4.0 Funktionsfarbe) */
+	--color-bg-sandgrau-hell: #f0ece8; /* Sandgrau hell */
+	--color-bg-sandgrau-heller: #f6f4f0; /* Sandgrau heller */
+
+	/* === Brand / accent colors === */
+	--color-brand-rot: #e1320f; /* CD 4.0 Primärfarbe Rot (AA) — Bundeslogo */
+	--color-brand-rot-dunkel: #b92b06; /* Rot dunkel — AA-Textfarbe */
+	--color-brand-schwarz: #000000; /* CD 4.0 Primärfarbe Schwarz */
+	--color-brand-taubenblau: #286f9c; /* Web-SG brand-01 Taubenblau */
+	--color-brand-taubenblau-dunkel: #104166; /* brand-01 dunkel */
+	--color-brand-dunkelblau: #00436b; /* Web-SG Dunkelblau */
+	--color-brand-rot-themen: #9e0529; /* Web-SG Rot (Themen) */
+	--color-brand-rot-themen-dunkel: #720009; /* Rot dunkel */
+
+	/* === Functional / status colors === */
+	--color-danger: #c92c0c; /* danger */
+	--color-danger-hover: #b1260b; /* hover-danger */
+	--color-success: #37783e; /* success */
+	--color-success-hover: #29592d; /* hover-success */
+	--color-warning-1: #ffd400; /* warning-1 */
+	--color-warning-1-hover: #ccaa00; /* hover-warning-1 */
+	--color-warning-2: #c57f00; /* warning-2 / brand-04 */
+	--color-warning-2-hover: #9e6200; /* hover-warning-2 */
+
+	/* === Borders / dividers === */
+	--color-border: #ccd9de; /* Trennlinien, Rahmen */
+	--color-border-form: #e9e3df; /* Formularlinien, WCAG-konform */
+	--color-disabled: #949494; /* disabled */
+
+	/* === Accent (campaigns) === */
+	--color-accent: #e94727; /* Akzentfarbe Kampagnen */
+	--color-accent-alt: #5aa4b0; /* alternative Akzentfarbe */
+}
+
+/* === Dark variant of BEV theme === */
+.bev.dark {
+	--color-text-01: #eff4f7; /* heller Text auf dunklem Grund */
+	--color-text-02: #b8c6d1; /* Sekundärtext */
+	--color-text-03: #7a8a96; /* tertiary */
+	--color-text-inverse: #1a2530; /* Text auf hellen Akzentflächen */
+
+	--color-bg-standard: #1a2530; /* dunkles Blaugrau — Hauptbackground dark */
+	--color-bg-field: #21323f; /* field-01 dark */
+	--color-bg-table: #2a3a4a; /* Tabellen dark */
+	--color-bg-block: #2d3e4e; /* Block dark */
+	--color-bg-blaugrau: #2a3a4a;
+	--color-bg-blaugrau-hell: #21323f;
+	--color-bg-blaugrau-heller: #1a2530;
+	--color-bg-sandgrau: #2d3e4e;
+	--color-bg-sandgrau-hell: #26343f;
+	--color-bg-sandgrau-heller: #1f2d3a;
+
+	--color-border: #2f4252;
+	--color-border-form: #2d3e4e;
+	--color-disabled: #4a5a6a;
+}
+
+/* === Map BEV tokens onto Tailwind gray scale ===
+   The app drives nearly all surfaces via --color-gray-* CSS variables.
+   Light: neutral grays from the Web Styleguide (#fff, #f0f4f5, #e5ecee,
+   #ccd9de, #949494, #757575, #4d4d4d, #000) — no purple tint.
+   Dark: pure neutral dark grays. */
+.bev.light {
+	--color-gray-50: oklch(0.993 0 0);          /* #ffffff Standard-Hintergrund */
+	--color-gray-100: oklch(0.959 0.003 250);   /* #f0f4f5 field-01 */
+	--color-gray-200: oklch(0.933 0.003 250);   /* #e5ecee table */
+	--color-gray-300: oklch(0.874 0.003 250);   /* #ccd9de border */
+	--color-gray-400: oklch(0.662 0 0);         /* #949494 disabled (neutral) */
+	--color-gray-500: oklch(0.662 0 0);         /* #949494 */
+	--color-gray-600: oklch(0.559 0 0);         /* #757575 text-03 (neutral) */
+	--color-gray-700: oklch(0.417 0 0);         /* #4d4d4d text-02 (neutral) */
+	--color-gray-800: oklch(0.287 0 0);         /* #2b2b2b (neutral) */
+	--color-gray-850: oklch(0.22 0 0);
+	--color-gray-900: oklch(0.18 0 0);
+	--color-gray-950: oklch(0.13 0 0);
+}
+
+.bev.dark {
+	--color-gray-50: oklch(0.18 0 0);           /* dark neutral — main bg */
+	--color-gray-100: oklch(0.22 0 0);          /* field dark */
+	--color-gray-200: oklch(0.27 0 0);          /* table dark */
+	--color-gray-300: oklch(0.32 0 0);          /* border dark */
+	--color-gray-400: oklch(0.42 0 0);          /* disabled dark */
+	--color-gray-500: oklch(0.559 0 0);         /* #757575 text-03 */
+	--color-gray-600: oklch(0.662 0 0);         /* #949494 */
+	--color-gray-700: oklch(0.78 0 0);
+	--color-gray-800: oklch(0.9 0 0);           /* #e0e0e0 text-01 light-on-dark */
+	--color-gray-850: oklch(0.93 0 0);
+	--color-gray-900: oklch(0.95 0 0);
+	--color-gray-950: oklch(0.97 0 0);
+}
+
+/* === Primary accent: federal Rot overrides Tailwind blue ===
+   Applies in both light and dark BEV modes. */
+.bev {
+	--color-blue-50: oklch(0.961 0.061 331.9); /* #fef2f0 */
+	--color-blue-100: oklch(0.926 0.073 346.2); /* #fde4e0 */
+	--color-blue-200: oklch(0.855 0.109 3.7); /* #fac7bf */
+	--color-blue-300: oklch(0.753 0.174 15.6); /* #f59d90 */
+	--color-blue-400: oklch(0.647 0.258 25.7); /* #ef6e5a */
+	--color-blue-500: oklch(0.532 0.379 51.7); /* #e1320f federal Rot */
+	--color-blue-600: oklch(0.491 0.344 51.1); /* #c92d0d button Rot */
+	--color-blue-700: oklch(0.464 0.404 71.8); /* #b92b06 Rot dunkel (AA) */
+	--color-blue-800: oklch(0.387 0.273 56.4); /* #8f2105 */
+	--color-blue-900: oklch(0.324 0.215 53.9); /* #6e1a04 */
+	--color-blue-950: oklch(0.224 0.134 53.0); /* #3d0e02 */
+}
+
+/* === Status colors map === */
+.bev {
+	--color-emerald-50: oklch(0.95 0.03 145);
+	--color-emerald-100: oklch(0.91 0.05 145);
+	--color-emerald-200: oklch(0.85 0.08 145);
+	--color-emerald-300: oklch(0.77 0.12 145);
+	--color-emerald-400: oklch(0.68 0.15 145);
+	--color-emerald-500: oklch(0.55 0.15 145); /* #37783e success */
+	--color-emerald-600: oklch(0.49 0.14 145); /* #29592d hover-success */
+	--color-emerald-700: oklch(0.42 0.12 145);
+	--color-emerald-800: oklch(0.34 0.09 145);
+	--color-emerald-900: oklch(0.27 0.06 145);
+	--color-emerald-950: oklch(0.2 0.04 145);
+
+	--color-yellow-50: oklch(0.97 0.05 85);
+	--color-yellow-100: oklch(0.94 0.11 85);
+	--color-yellow-200: oklch(0.91 0.16 85); /* #ffd400 warning-1 */
+	--color-yellow-300: oklch(0.87 0.15 85);
+	--color-yellow-400: oklch(0.82 0.14 85);
+	--color-yellow-500: oklch(0.78 0.13 75); /* #ccaa00 hover-warning-1 */
+	--color-yellow-600: oklch(0.72 0.13 65); /* #c57f00 warning-2 */
+	--color-yellow-700: oklch(0.6 0.11 55); /* #9e6200 */
+	--color-yellow-800: oklch(0.48 0.09 50);
+	--color-yellow-900: oklch(0.36 0.06 50);
+	--color-yellow-950: oklch(0.25 0.04 50);
+
+	--color-red-50: oklch(0.96 0.06 30);
+	--color-red-100: oklch(0.92 0.1 30);
+	--color-red-200: oklch(0.84 0.16 30);
+	--color-red-300: oklch(0.74 0.2 30);
+	--color-red-400: oklch(0.63 0.24 30);
+	--color-red-500: oklch(0.55 0.24 30); /* #c92c0c danger */
+	--color-red-600: oklch(0.5 0.24 30); /* #b1260b hover-danger */
+	--color-red-700: oklch(0.43 0.2 30);
+	--color-red-800: oklch(0.35 0.16 30);
+	--color-red-900: oklch(0.27 0.12 30);
+	--color-red-950: oklch(0.2 0.08 30);
+}
+
+/* === Link colors — federal Rot for hyperlinks and URLs ===
+   Web styleguide: links use the theme brand color; here we apply the
+   federal red (#c92c0c danger / #9e0529 Themen-Rot) for links in markdown
+   content, chat messages, and the marked renderer. Subtle, not distracting. */
+.bev .markdown-prose a,
+.bev .markdown-prose-sm a,
+.bev .markdown-prose-xs a,
+.bev .marked a,
+.bev .markdown a,
+.bev .input-prose a {
+	color: #c92c0c !important;
+	text-decoration: underline;
+}
+.bev .markdown-prose a:hover,
+.bev .markdown-prose-sm a:hover,
+.bev .markdown-prose-xs a:hover,
+.bev .marked a:hover,
+.bev .markdown a:hover,
+.bev .input-prose a:hover {
+	color: #b1260b !important;
+}
+
+/* Dark mode: slightly brighter red for contrast on dark surfaces */
+.bev.dark .markdown-prose a,
+.bev.dark .markdown-prose-sm a,
+.bev.dark .markdown-prose-xs a,
+.bev.dark .marked a,
+.bev.dark .markdown a,
+.bev.dark .input-prose a {
+	color: #e94727 !important;
+}
+.bev.dark .markdown-prose a:hover,
+.bev.dark .markdown-prose-sm a:hover,
+.bev.dark .markdown-prose-xs a:hover,
+.bev.dark .marked a:hover,
+.bev.dark .markdown a:hover,
+.bev.dark .input-prose a:hover {
+	color: #f26244 !important;
+}
+
+/* Prose link variables (Tailwind Typography plugin) */
+.bev.light {
+	--tw-prose-links: #c92c0c;
+	--tw-prose-invert-links: #e94727;
+	--tw-prose-body: #000000;
+	--tw-prose-invert-body: #e0e0e0;
+}
+.bev.dark {
+	--tw-prose-links: #e94727;
+	--tw-prose-invert-links: #c92c0c;
+	--tw-prose-body: #e0e0e0;
+	--tw-prose-invert-body: #000000;
+}
