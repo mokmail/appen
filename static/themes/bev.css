@@ -111,20 +111,24 @@
 	--color-gray-950: oklch(0.97 0 0);
 }
 
-/* === Primary accent: federal Rot overrides Tailwind blue ===
-   Applies in both light and dark BEV modes. */
+/* === Primary accent: BEV Rot overrides Tailwind blue ===
+   Applies in both light and dark BEV modes.
+   The ramp is anchored on #a72702 — the actual BEV-website red (brand3/brand4),
+   with #e1320f (Styleguide CD 4.0 federal Rot) as the brighter 400 step and
+   #e94727 (campaign orange-red, brand6) as the 300 highlight.
+   Hover/active tones follow bev.gv.at: #811e02 (hover), #751b01 (active). */
 .bev {
-	--color-blue-50: oklch(0.961 0.061 331.9); /* #fef2f0 */
-	--color-blue-100: oklch(0.926 0.073 346.2); /* #fde4e0 */
-	--color-blue-200: oklch(0.855 0.109 3.7); /* #fac7bf */
-	--color-blue-300: oklch(0.753 0.174 15.6); /* #f59d90 */
-	--color-blue-400: oklch(0.647 0.258 25.7); /* #ef6e5a */
-	--color-blue-500: oklch(0.532 0.379 51.7); /* #e1320f federal Rot */
-	--color-blue-600: oklch(0.491 0.344 51.1); /* #c92d0d button Rot */
-	--color-blue-700: oklch(0.464 0.404 71.8); /* #b92b06 Rot dunkel (AA) */
-	--color-blue-800: oklch(0.387 0.273 56.4); /* #8f2105 */
-	--color-blue-900: oklch(0.324 0.215 53.9); /* #6e1a04 */
-	--color-blue-950: oklch(0.224 0.134 53.0); /* #3d0e02 */
+	--color-blue-50:  oklch(0.965 0.025 38);  /* #fbf0ec — faint Rot wash */
+	--color-blue-100: oklch(0.935 0.040 36);  /* #f6e1d9 */
+	--color-blue-200: oklch(0.875 0.075 36);  /* #ecc9b9 */
+	--color-blue-300: oklch(0.790 0.155 40);  /* #e94727 campaign Rot (brand6) */
+	--color-blue-400: oklch(0.685 0.230 46);  /* #e1320f CD 4.0 federal Rot */
+	--color-blue-500: oklch(0.475 0.145 38);  /* #a72702 BEV website Rot (brand3/4) */
+	--color-blue-600: oklch(0.435 0.130 36);  /* #811e02 Rot hover */
+	--color-blue-700: oklch(0.395 0.118 36); /* #751b01 Rot active */
+	--color-blue-800: oklch(0.330 0.095 36); /* #5e1601 */
+	--color-blue-900: oklch(0.265 0.075 36); /* #4a1201 */
+	--color-blue-950: oklch(0.190 0.050 36); /* #341000 */
 }
 
 /* === Status colors map === */
@@ -166,17 +170,17 @@
 	--color-red-950: oklch(0.2 0.08 30);
 }
 
-/* === Link colors — federal Rot for hyperlinks and URLs ===
+/* === Link colors — BEV Rot for hyperlinks and URLs ===
    Web styleguide: links use the theme brand color; here we apply the
-   federal red (#c92c0c danger / #9e0529 Themen-Rot) for links in markdown
-   content, chat messages, and the marked renderer. Subtle, not distracting. */
+   BEV website red (#a72702 brand3/4) for links in markdown content,
+   chat messages, and the marked renderer. Hover darkens to #811e02. */
 .bev .markdown-prose a,
 .bev .markdown-prose-sm a,
 .bev .markdown-prose-xs a,
 .bev .marked a,
 .bev .markdown a,
 .bev .input-prose a {
-	color: #c92c0c !important;
+	color: #a72702 !important;
 	text-decoration: underline;
 }
 .bev .markdown-prose a:hover,
@@ -185,10 +189,10 @@
 .bev .marked a:hover,
 .bev .markdown a:hover,
 .bev .input-prose a:hover {
-	color: #b1260b !important;
+	color: #811e02 !important;
 }
 
-/* Dark mode: slightly brighter red for contrast on dark surfaces */
+/* Dark mode: brighter Rot for contrast on dark surfaces */
 .bev.dark .markdown-prose a,
 .bev.dark .markdown-prose-sm a,
 .bev.dark .markdown-prose-xs a,
@@ -208,14 +212,416 @@
 
 /* Prose link variables (Tailwind Typography plugin) */
 .bev.light {
-	--tw-prose-links: #c92c0c;
+	--tw-prose-links: #a72702;
 	--tw-prose-invert-links: #e94727;
 	--tw-prose-body: #000000;
 	--tw-prose-invert-body: #e0e0e0;
 }
 .bev.dark {
 	--tw-prose-links: #e94727;
-	--tw-prose-invert-links: #c92c0c;
+	--tw-prose-invert-links: #a72702;
 	--tw-prose-body: #e0e0e0;
 	--tw-prose-invert-body: #000000;
+}
+
+/* =====================================================================
+   KARTOGRAFISCH — modernized BEV design system (2026)
+   Direction: refined-minimalist federal surveying/metrology aesthetic.
+   Principles: hairline Blaugrau structure, surgical Rot accent (one job),
+   monospace data vernacular, topographic contour signature motif.
+   ===================================================================== */
+
+.bev {
+	/* Structural hairlines — replace heavy gray-100 block dividers */
+	--bev-hairline: var(--color-border);          /* #ccd9de Blaugrau border */
+	--bev-hairline-soft: color-mix(in oklab, var(--color-border) 60%, transparent);
+	--bev-hairline-strong: color-mix(in oklab, var(--color-text-01) 18%, transparent);
+
+	/* The single surgical accent — BEV website Rot #a72702 (brand3/4),
+	   the color bev.gv.at actually uses for buttons, badges, card links.
+	   AA-darker variant #751b01 (Rot active) for text on light. */
+	--bev-accent: #a72702;                          /* BEV website Rot */
+	--bev-accent-bright: #e94727;                    /* campaign orange-red (brand6) */
+	--bev-accent-aa: #751b01;                        /* Rot active — AA text on light */
+	--bev-accent-hover: #811e02;                     /* Rot hover */
+	--bev-accent-rail: 2px;                           /* active-nav indicator width */
+
+	/* Cartographic contour signature — hairline concentric survey lines */
+	--bev-contour-stroke: color-mix(in oklab, var(--color-brand-taubenblau) 22%, transparent);
+	--bev-contour-stroke-active: color-mix(in oklab, var(--color-brand-rot) 28%, transparent);
+
+	/* Type vernacular — metrology data readouts use monospace */
+	--bev-font-data: 'JetBrainsMono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+	--bev-tracking-display: -0.018em;              /* tightened Archivo display */
+	--bev-tracking-data: 0.04em;                   /* monospace data labels */
+}
+
+/* === Display type: Archivo tightened, used with restraint === */
+.bev .font-primary {
+	letter-spacing: var(--bev-tracking-display);
+	font-feature-settings: 'ss01' 1, 'cv11' 1;    /* Archivo stylistic alternates */
+}
+
+/* === Data label vernacular — coordinates, model IDs, status readouts ===
+   Use: <span class="bev-data">N 48°12'34"</span>
+   Encodes the metrology/surveying world without decoration. */
+.bev .bev-data,
+.bev-data {
+	font-family: var(--bev-font-data);
+	font-size: 0.6875rem;                          /* 11px — captions/readouts */
+	letter-spacing: var(--bev-tracking-data);
+	color: var(--color-text-02);
+	text-transform: uppercase;
+	line-height: 1.4;
+}
+
+/* === Hairline divider — replaces bg-gray-100/100 blocks with structure ===
+   Use: <div class="bev-hairline-b"></div> (border) or .bev-hairline-bg (1px line) */
+.bev .bev-hairline-t { border-top: 1px solid var(--bev-hairline); }
+.bev .bev-hairline-b { border-bottom: 1px solid var(--bev-hairline); }
+.bev .bev-hairline-s { border-inline-start: 1px solid var(--bev-hairline); }
+.bev .bev-hairline-e { border-inline-end: 1px solid var(--bev-hairline); }
+
+/* === Active-state rail — the surgical Rot indicator ===
+   Use on the active nav item: a 2px Rot inline-start rail + tinted surface.
+   Only ever ONE element on screen carries the rail at a time. */
+.bev .bev-rail-active {
+	position: relative;
+}
+.bev .bev-rail-active::before {
+	content: '';
+	position: absolute;
+	inset-inline-start: 0;
+	inset-block: 0.25rem;
+	width: var(--bev-accent-rail);
+	background: var(--bev-accent);
+	border-radius: 1px;
+}
+.bev .bev-rail-active::after {
+	content: '';
+	position: absolute;
+	inset: 0;
+	background: color-mix(in oklab, var(--bev-accent) 6%, transparent);
+	border-radius: inherit;
+	pointer-events: none;
+}
+
+/* === Lucide icon baseline alignment with the new system ===
+   Lucide ships .lucide-icon; ensure it inherits currentColor & crisp rendering. */
+.bev .lucide-icon {
+	shape-rendering: geometricPrecision;
+}
+
+/* === Page-load orchestrated reveal (respects reduced motion) === */
+@keyframes bev-rise {
+	from { opacity: 0; transform: translateY(8px); }
+	to   { opacity: 1; transform: translateY(0); }
+}
+.bev .bev-rise {
+	animation: bev-rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.bev .bev-rise-2 { animation-delay: 0.08s; }
+.bev .bev-rise-3 { animation-delay: 0.16s; }
+.bev .bev-rise-4 { animation-delay: 0.24s; }
+
+@media (prefers-reduced-motion: reduce) {
+	.bev .bev-rise,
+	.bev .bev-rise-2,
+	.bev .bev-rise-3,
+	.bev .bev-rise-4 {
+		animation: none;
+	}
+}
+
+/* === Focus ring — links & buttons only, WCAG-AA.
+   Inputs/textarea/select keep their own border treatment, no global outline. === */
+.bev :where(a, button):focus-visible {
+	outline: 2px solid var(--color-brand-taubenblau);
+	outline-offset: 2px;
+	border-radius: 2px;
+}
+
+/* =====================================================================
+   SIDEBAR — flat modern surface (2026 redesign)
+   No depth, no shadows, no gradients. The sidebar is a calm flat panel:
+   hairline structure, a 2px Rot rail on the active chat, quiet hover tint.
+   Flat is the point — restraint reads as confidence.
+   ===================================================================== */
+
+.bev {
+	/* Flat sidebar surface — solid, no gradient */
+	--bev-sidebar-bg: var(--color-bg-standard);
+	--bev-sidebar-bg-dark: oklch(0.13 0 0);
+
+	/* Active rail — just the 2px Rot mark, no glow */
+	--bev-rail-glow: none;
+
+	/* Flat tiles — transparent, no shadow, no lift */
+	--bev-tile-bg: transparent;
+	--bev-tile-bg-hover: color-mix(in oklab, var(--color-text-01) 5%, transparent);
+	--bev-tile-shadow: none;
+
+	/* Eyebrow / section label — metrology vernacular */
+	--bev-eyebrow-color: color-mix(in oklab, var(--color-brand-taubenblau) 75%, transparent);
+}
+
+/* === Sidebar surface (flat, light + dark) === */
+.bev.light #sidebar,
+.bev.light #sidebar > div > div:first-child {
+	background: var(--bev-sidebar-bg);
+}
+.bev.dark #sidebar,
+.bev.dark #sidebar > div > div:first-child {
+	background: var(--bev-sidebar-bg-dark);
+}
+
+/* === Active chat — flat hairline rail, no shadow === */
+.bev .bev-chat-active {
+	position: relative;
+	background: var(--bev-tile-bg-hover);
+	box-shadow: none;
+}
+.bev .bev-chat-active::before {
+	content: '';
+	position: absolute;
+	inset-inline-start: 0;
+	inset-block: 0.2rem;
+	width: 2px;
+	background: var(--bev-accent);
+	border-radius: 2px;
+	box-shadow: none;
+}
+
+/* === Flat tiles — transparent, quiet hover tint, no lift === */
+.bev .bev-tile {
+	background: transparent;
+	box-shadow: none;
+	transition: background 0.15s ease;
+}
+.bev .bev-tile:hover {
+	background: var(--bev-tile-bg-hover);
+	transform: none;
+	box-shadow: none;
+}
+.bev .bev-tile:active {
+	transform: none;
+}
+
+/* === "The AI is thinking" pulse — active sessions only === */
+@keyframes bev-pulse {
+	0%, 100% { opacity: 1; transform: scale(1); }
+	50%      { opacity: 0.55; transform: scale(0.85); }
+}
+.bev .bev-pulse {
+	animation: bev-pulse 1.6s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+	.bev .bev-pulse { animation: none; }
+}
+
+/* === Section eyebrow — small monospace label above folder groups === */
+.bev .bev-eyebrow {
+	font-family: var(--bev-font-data);
+	font-size: 0.625rem;
+	letter-spacing: var(--bev-tracking-data);
+	text-transform: uppercase;
+	color: var(--bev-eyebrow-color);
+	font-weight: 500;
+}
+
+/* === Collapsed rail — flat, quiet hover tint === */
+.bev #sidebar.bev-rail-collapsed {
+	transition: background 0.15s ease;
+}
+.bev #sidebar.bev-rail-collapsed:hover {
+	background: var(--bev-tile-bg-hover);
+}
+
+/* === User profile footer — flat, no glass, no lift === */
+.bev .bev-user-card {
+	background: transparent;
+	box-shadow: none;
+	backdrop-filter: none;
+	transition: background 0.15s ease;
+}
+.bev .bev-user-card:hover {
+	background: var(--bev-tile-bg-hover);
+	transform: none;
+}
+.bev .bev-status-ring {
+	box-shadow: 0 0 0 2px var(--color-bg-standard);
+}
+
+/* =====================================================================
+    BEV.GV.AT DESIGN LANGUAGE — website fidelity layer (2026)
+    Applies the visual character of the actual BEV website so the
+    platform reads as the same institution: brand grays, BEV-Rot
+    interactive surfaces, top accent strip, card hover borders,
+    section-heading color, and the flat federal header feel.
+    ===================================================================== */
+
+.bev {
+	/* === Brand grays from bev.gv.at === */
+	--bev-brand1-gray: #6b6b6b;   /* brand1 — headings, nav active, card hover border */
+	--bev-brand2-gray: #4b4b4b;   /* brand2 — dropdowns, mobile nav, slider bg */
+	--bev-brand-light: #c6c6c6;   /* --light — footer linklists bar */
+	--bev-accent-strip: #aecbff;  /* thin blue top strip on body */
+
+	/* === Indigo → BEV Rot ramp (Tailwind indigo is used for send/voice) === */
+	--color-indigo-50:  oklch(0.965 0.025 38);
+	--color-indigo-100: oklch(0.935 0.040 36);
+	--color-indigo-200: oklch(0.875 0.075 36);
+	--color-indigo-300: oklch(0.790 0.155 40);  /* #e94727 */
+	--color-indigo-400: oklch(0.685 0.230 46);  /* #e1320f */
+	--color-indigo-500: oklch(0.475 0.145 38);  /* #a72702 BEV Rot */
+	--color-indigo-600: oklch(0.435 0.130 36);  /* #811e02 */
+	--color-indigo-700: oklch(0.395 0.118 36);  /* #751b01 */
+	--color-indigo-800: oklch(0.330 0.095 36);
+	--color-indigo-900: oklch(0.265 0.075 36);
+	--color-indigo-950: oklch(0.190 0.050 36);
+}
+
+/* === Body top accent strip — the signature blue line from bev.gv.at === */
+.bev.light body {
+	border-top: 2px solid var(--bev-accent-strip);
+}
+.bev.dark body {
+	border-top: 2px solid color-mix(in oklab, var(--bev-accent-strip) 40%, transparent);
+}
+
+/* === Heading colors — bev.gv.at uses brand1 gray for section titles ===
+   h2/page-section headers: #6b6b6b; h3: #000; h4/h5: #4d4d4d.
+   We scope this to prose/content areas so app chrome headings keep their
+   Tailwind defaults where needed. */
+.bev .markdown-prose h2,
+.bev .markdown-prose-sm h2,
+.bev .markdown-prose-xs h2,
+.bev .marked h2,
+.bev .markdown h2 {
+	color: var(--bev-brand1-gray);
+	font-weight: 700;
+}
+.bev .markdown-prose h3,
+.bev .markdown-prose-sm h3,
+.bev .markdown-prose-xs h3,
+.bev .marked h3,
+.bev .markdown h3 {
+	color: #000000;
+	font-weight: 700;
+}
+.bev.dark .markdown-prose h2,
+.bev.dark .markdown-prose-sm h2,
+.bev.dark .markdown-prose-xs h2,
+.bev.dark .marked h2,
+.bev.dark .markdown h2 {
+	color: oklch(0.78 0 0);
+}
+.bev.dark .markdown-prose h3,
+.bev.dark .markdown-prose-sm h3,
+.bev.dark .markdown-prose-xs h3,
+.bev.dark .marked h3,
+.bev.dark .markdown h3 {
+	color: oklch(0.90 0 0);
+}
+
+/* === Card hover — bev.gv.at cards gain a brand1 gray border on hover === */
+.bev .bev-tile:hover {
+	border-color: var(--bev-brand1-gray);
+}
+
+/* === Active nav accent — BEV Rot rail + subtle brand1 tint === */
+.bev .bev-chat-active::before {
+	background: var(--bev-accent);  /* BEV Rot #a72702 rail */
+}
+.bev .bev-chat-active {
+	background: color-mix(in oklab, var(--bev-brand1-gray) 8%, transparent);
+}
+
+/* === Primary buttons (send, submit, confirm) — BEV Rot ===
+   The app uses bg-blue-600/bg-indigo-500 for primary actions; both are now
+   mapped to the BEV Rot ramp above. Here we ensure hover/active transitions
+   feel like bev.gv.at's .btn-brand3 (Rot → #811e02 hover → #751b01 active). */
+.bev button[class*="bg-blue-600"]:hover,
+.bev button[class*="bg-blue-500"]:hover,
+.bev button[class*="bg-indigo-500"]:hover,
+.bev button[class*="bg-indigo-400"]:hover {
+	filter: brightness(0.88);
+}
+.bev button[class*="bg-blue-600"]:active,
+.bev button[class*="bg-blue-500"]:active,
+.bev button[class*="bg-indigo-500"]:active,
+.bev button[class*="bg-indigo-400"]:active {
+	filter: brightness(0.80);
+}
+
+/* === Toggle switches — peer-checked:bg-blue-600 becomes BEV Rot === */
+.bev .peer-checked\:bg-blue-600,
+.bev .peer-checked\:bg-blue-500,
+.bev .peer-checked\:bg-indigo-600,
+.bev .peer-checked\:bg-indigo-500 {
+	background-color: var(--bev-accent) !important;
+}
+
+/* === Loading/progress bars — BEV Rot fill === */
+.bev .animate-loading-bar {
+	background-color: var(--bev-accent);
+}
+
+/* === Focus ring — Taubenblau (kept, matches bev.gv.at's accessible outline) === */
+
+/* === Selection highlight — BEV Rot at low opacity === */
+.bev ::selection {
+	background: color-mix(in oklab, var(--bev-accent) 22%, transparent);
+	color: inherit;
+}
+
+/* === Scrollbar — subtle Blaugrau track, Rot thumb on hover === */
+.bev ::-webkit-scrollbar-thumb {
+	background: var(--color-border);
+}
+.bev ::-webkit-scrollbar-thumb:hover {
+	background: var(--bev-accent);
+}
+
+/* === Badges / pills — BEV Rot background like .badge-brand3 === */
+.bev .bg-blue-500\/10,
+.bev .bg-blue-500\/20,
+.bev .bg-indigo-500\/10 {
+	background-color: color-mix(in oklab, var(--bev-accent) 12%, transparent);
+}
+
+/* === "New Chat" / primary sidebar action — quiet Rot accent on hover === */
+.bev .bg-gray-50:hover {
+	background-color: color-mix(in oklab, var(--bev-accent) 5%, transparent);
+}
+
+/* === Danger/error surfaces — keep the BEV danger red #c92c0c ===
+   (Already mapped via --color-red-* above; no change needed.) */
+
+/* === Page title / hero headings — brand1 gray like bev.gv.at === */
+.bev .font-primary.text-3xl,
+.bev .font-primary.text-2xl {
+	color: var(--bev-brand1-gray);
+}
+.bev.dark .font-primary.text-3xl,
+.bev.dark .font-primary.text-2xl {
+	color: oklch(0.78 0 0);
+}
+
+/* === Tooltip — dark brand2 gray like bev.gv.at .tooltip-inner === */
+.bev .tippy-box {
+	background: var(--bev-brand2-gray);
+	color: #ffffff;
+}
+.bev .tippy-box[data-placement^='top'] > .tippy-arrow::before {
+	border-top-color: var(--bev-brand2-gray);
+}
+.bev .tippy-box[data-placement^='bottom'] > .tippy-arrow::before {
+	border-bottom-color: var(--bev-brand2-gray);
+}
+.bev .tippy-box[data-placement^='left'] > .tippy-arrow::before {
+	border-left-color: var(--bev-brand2-gray);
+}
+.bev .tippy-box[data-placement^='right'] > .tippy-arrow::before {
+	border-right-color: var(--bev-brand2-gray);
 }
