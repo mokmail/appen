@@ -1,50 +1,43 @@
-from typing import List, Optional
-from pydantic import BaseModel
-from fastapi import APIRouter, Depends, HTTPException, status, Request, Query
-from fastapi.responses import StreamingResponse
+from __future__ import annotations
 
 import asyncio
-import gc
 import io
-import json
 import logging
-import time
-import uuid
 import zipfile
-from urllib.parse import quote, urlparse
-import requests
+from typing import List, Optional
+from urllib.parse import quote
 
-from sqlalchemy.ext.asyncio import AsyncSession
-from open_webui.internal.db import get_async_session, get_async_db
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi.responses import StreamingResponse
+from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL
+from open_webui.constants import ERROR_MESSAGES
+from open_webui.internal.db import get_async_session
+from open_webui.models.access_grants import AccessGrants
+from open_webui.models.files import FileMetadataResponse, FileModel, FileModelResponse, Files
 from open_webui.models.groups import Groups
 from open_webui.models.knowledge import (
     KnowledgeDirectoryForm,
     KnowledgeDirectoryModel,
     KnowledgeFileListResponse,
-    Knowledges,
     KnowledgeForm,
     KnowledgeResponse,
+    Knowledges,
     KnowledgeUserResponse,
 )
-from open_webui.models.files import Files, FileForm, FileModel, FileMetadataResponse
+from open_webui.models.models import ModelForm, Models
 from open_webui.retrieval.vector.async_client import ASYNC_VECTOR_DB_CLIENT
 from open_webui.routers.retrieval import (
-    process_file,
-    ProcessFileForm,
-    process_files_batch,
     BatchProcessFilesForm,
+    ProcessFileForm,
+    process_file,
+    process_files_batch,
 )
 from open_webui.storage.provider import Storage
-
-from open_webui.constants import ERROR_MESSAGES
-from open_webui.utils.auth import get_verified_user, get_admin_user
-from open_webui.utils.access_control import has_permission, filter_allowed_access_grants
+from open_webui.utils.access_control import filter_allowed_access_grants, has_permission
 from open_webui.utils.access_control.files import has_access_to_file
-from open_webui.models.access_grants import AccessGrants
-
-
-from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL
-from open_webui.models.models import Models, ModelForm
+from open_webui.utils.auth import get_admin_user, get_verified_user
+from pydantic import BaseModel
+from sqlalchemy.ext.asyncio import AsyncSession
 
 log = logging.getLogger(__name__)
 
@@ -108,7 +101,7 @@ async def remove_knowledge_base_metadata_embedding(knowledge_base_id: str) -> bo
 
 
 class KnowledgeAccessResponse(KnowledgeUserResponse):
-    write_access: Optional[bool] = False
+    write_access: bool | None = False
 
 
 class KnowledgeAccessListResponse(BaseModel):
@@ -118,7 +111,7 @@ class KnowledgeAccessListResponse(BaseModel):
 
 @router.get('/', response_model=KnowledgeAccessListResponse)
 async def get_knowledge_bases(
-    page: Optional[int] = 1,
+    page: int | None = 1,
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
@@ -167,9 +160,9 @@ async def get_knowledge_bases(
 
 @router.get('/search', response_model=KnowledgeAccessListResponse)
 async def search_knowledge_bases(
-    query: Optional[str] = None,
-    view_option: Optional[str] = None,
-    page: Optional[int] = 1,
+    query: str | None = None,
+    view_option: str | None = None,
+    page: int | None = 1,
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
@@ -223,8 +216,9 @@ async def search_knowledge_bases(
 
 @router.get('/search/files', response_model=KnowledgeFileListResponse)
 async def search_knowledge_files(
-    query: Optional[str] = None,
-    page: Optional[int] = 1,
+    query: str | None = None,
+    include_content: bool = Query(False, description='Include file content in search (expensive).'),
+    page: int | None = 1,
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
@@ -235,6 +229,8 @@ async def search_knowledge_files(
     filter = {}
     if query:
         filter['query'] = query
+    if include_content:
+        filter['include_content'] = True
 
     groups = await Groups.get_groups_by_member_id(user.id, db=db)
     if groups:
@@ -250,7 +246,7 @@ async def search_knowledge_files(
 ############################
 
 
-@router.post('/create', response_model=Optional[KnowledgeResponse])
+@router.post('/create', response_model=KnowledgeResponse | None)
 async def create_new_knowledge(
     request: Request,
     form_data: KnowledgeForm,
@@ -388,11 +384,11 @@ async def reindex_knowledge_base_metadata_embeddings(
 
 
 class KnowledgeFilesResponse(KnowledgeResponse):
-    files: Optional[list[FileMetadataResponse]] = None
-    write_access: Optional[bool] = False
+    files: list[FileMetadataResponse | None] = None
+    write_access: bool | None = False
 
 
-@router.get('/{id}', response_model=Optional[KnowledgeFilesResponse])
+@router.get('/{id}', response_model=KnowledgeFilesResponse | None)
 async def get_knowledge_by_id(id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
     knowledge = await Knowledges.get_knowledge_by_id(id=id, db=db)
 
@@ -439,7 +435,7 @@ async def get_knowledge_by_id(id: str, user=Depends(get_verified_user), db: Asyn
 ############################
 
 
-@router.post('/{id}/update', response_model=Optional[KnowledgeFilesResponse])
+@router.post('/{id}/update', response_model=KnowledgeFilesResponse | None)
 async def update_knowledge_by_id(
     request: Request,
     id: str,
@@ -509,7 +505,7 @@ class KnowledgeAccessGrantsForm(BaseModel):
     access_grants: list[dict]
 
 
-@router.post('/{id}/access/update', response_model=Optional[KnowledgeFilesResponse])
+@router.post('/{id}/access/update', response_model=KnowledgeFilesResponse | None)
 async def update_knowledge_access_by_id(
     request: Request,
     id: str,
@@ -557,6 +553,71 @@ async def update_knowledge_access_by_id(
 
 
 ############################
+# GetPendingKnowledgeFiles
+############################
+
+
+@router.get('/{id}/files/pending')
+async def get_pending_knowledge_files(
+    id: str,
+    stream: bool = Query(False),
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    """Return files that are being processed for this knowledge base but not yet linked.
+
+    After a file is uploaded with ``knowledge_id`` in its metadata, the backend
+    processes it in a background task before linking it to the ``knowledge_file``
+    join table.  During this window the file is invisible to the normal file
+    list endpoint.  This endpoint exposes those in-flight files so the frontend
+    can show them with a processing indicator even after a page reload.
+
+    When ``stream=true``, returns an SSE stream that polls every 3 seconds
+    and emits the current pending file list.  Closes when no files remain.
+    """
+    knowledge = await Knowledges.get_knowledge_by_id(id=id, db=db)
+    if not knowledge:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+    if not (
+        user.role == 'admin'
+        or knowledge.user_id == user.id
+        or await AccessGrants.has_access(
+            user_id=user.id,
+            resource_type='knowledge',
+            resource_id=knowledge.id,
+            permission='read',
+            db=db,
+        )
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
+
+    if not stream:
+        return await Files.get_pending_files_for_knowledge(id, db=db)
+
+    async def event_stream(knowledge_id: str):
+        MAX_POLL_DURATION = 3600  # 1 hour max
+        for _ in range(MAX_POLL_DURATION // 3):
+            pending = await Files.get_pending_files_for_knowledge(knowledge_id)
+            data = [f.model_dump() for f in pending]
+            yield f'data: {json.dumps(data)}\n\n'
+            if len(pending) == 0:
+                break
+            await asyncio.sleep(3)
+
+    return StreamingResponse(
+        event_stream(id),
+        media_type='text/event-stream',
+    )
+
+
+############################
 # GetKnowledgeFilesById
 ############################
 
@@ -565,11 +626,13 @@ async def update_knowledge_access_by_id(
 async def get_knowledge_files_by_id(
     id: str,
     query: str | None = None,
+    include_content: bool = Query(False, description='Include file content in search (expensive).'),
     view_option: str | None = None,
     order_by: str | None = None,
     direction: str | None = None,
     directory_id: str | None = Query(None, description='Filter by directory ID. Pass empty string for root.'),
     page: int | None = 1,
+    limit: int | None = Query(None, description='Page size (admin only). Defaults to 30.'),
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
@@ -598,12 +661,18 @@ async def get_knowledge_files_by_id(
 
     page = max(page, 1)
 
-    limit = 30
+    # Allow admins to configure page size; non-admins always get the default
+    if user.role == 'admin' and limit is not None:
+        limit = max(1, limit)
+    else:
+        limit = PAGE_ITEM_COUNT
     skip = (page - 1) * limit
 
     filter = {}
     if query:
         filter['query'] = query
+    if include_content:
+        filter['include_content'] = True
     if view_option:
         filter['view_option'] = view_option
     if order_by:
@@ -627,7 +696,7 @@ class KnowledgeFileIdForm(BaseModel):
     directory_id: Optional[str] = None
 
 
-@router.post('/{id}/file/add', response_model=Optional[KnowledgeFilesResponse])
+@router.post('/{id}/file/add', response_model=KnowledgeFilesResponse | None)
 async def add_file_to_knowledge_by_id(
     request: Request,
     id: str,
@@ -714,7 +783,7 @@ async def add_file_to_knowledge_by_id(
         )
 
 
-@router.post('/{id}/file/update', response_model=Optional[KnowledgeFilesResponse])
+@router.post('/{id}/file/update', response_model=KnowledgeFilesResponse | None)
 async def update_file_from_knowledge_by_id(
     request: Request,
     id: str,
@@ -793,7 +862,7 @@ async def update_file_from_knowledge_by_id(
 ############################
 
 
-@router.post('/{id}/file/remove', response_model=Optional[KnowledgeFilesResponse])
+@router.post('/{id}/file/remove', response_model=KnowledgeFilesResponse | None)
 async def remove_file_from_knowledge_by_id(
     id: str,
     form_data: KnowledgeFileIdForm,
@@ -854,10 +923,7 @@ async def remove_file_from_knowledge_by_id(
         log.debug(e)
         pass
 
-    # Only the file owner or an admin may permanently delete the underlying
-    # file.  Collaborators with KB write access can unlink a file from the
-    # knowledge base but must not be able to destroy files they do not own,
-    # as the same file may be referenced by other KBs and chats.
+    # Anyone with write permission or higher can delete files
     if delete_file and (file.user_id == user.id or user.role == 'admin'):
         try:
             # Remove the file's collection from vector database
@@ -955,9 +1021,12 @@ async def delete_knowledge_by_id(
 ############################
 
 
-@router.post('/{id}/reset', response_model=Optional[KnowledgeResponse])
+@router.post('/{id}/reset', response_model=KnowledgeResponse | None)
 async def reset_knowledge_by_id(
-    id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
+    id: str,
+    include_directories: bool = Query(True),
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
 ):
     knowledge = await Knowledges.get_knowledge_by_id(id=id, db=db)
     if not knowledge:
@@ -988,7 +1057,7 @@ async def reset_knowledge_by_id(
         log.debug(e)
         pass
 
-    knowledge = await Knowledges.reset_knowledge_by_id(id=id, db=db)
+    knowledge = await Knowledges.reset_knowledge_by_id(id=id, include_directories=include_directories, db=db)
     return knowledge
 
 
@@ -998,9 +1067,9 @@ async def reset_knowledge_by_id(
 
 
 class FileManifestEntry(BaseModel):
-    filename: str       # basename: "readme.md"
-    path: str           # relative dir: "docs/api" or "" for root
-    checksum: str       # SHA-256 of raw bytes
+    filename: str  # basename: "readme.md"
+    path: str  # relative dir: "docs/api" or "" for root
+    checksum: str  # SHA-256 of raw bytes
     size: int
 
 
@@ -1009,12 +1078,13 @@ class SyncDiffForm(BaseModel):
 
 
 class SyncDiffResponse(BaseModel):
-    added: list[dict]               # [{filename, path}] — new files
-    modified: list[dict]            # [{filename, path, stale_file_id}] — changed files
-    deleted: list[dict]             # [{file_id, filename}] — files to remove
-    mkdir: list[str]                # directory paths to create
-    rmdir: list[str]                # directory IDs to remove
+    added: list[dict]  # [{filename, path}] — new files
+    modified: list[dict]  # [{filename, path, stale_file_id}] — changed files
+    deleted: list[dict]  # [{file_id, filename}] — files to remove
+    mkdir: list[str]  # directory paths to create
+    rmdir: list[str]  # directory IDs to remove
     unmodified_count: int
+    directory_map: dict[str, str]  # existing path → directory ID
 
 
 @router.post('/{id}/sync/diff', response_model=SyncDiffResponse)
@@ -1074,11 +1144,13 @@ async def sync_knowledge_diff(
         if key not in indexed_files:
             added.append({'filename': entry.filename, 'path': entry.path})
         elif indexed_files[key]['checksum'] != entry.checksum:
-            modified.append({
-                'filename': entry.filename,
-                'path': entry.path,
-                'stale_file_id': indexed_files[key]['file_id'],
-            })
+            modified.append(
+                {
+                    'filename': entry.filename,
+                    'path': entry.path,
+                    'stale_file_id': indexed_files[key]['file_id'],
+                }
+            )
         else:
             unmodified_count += 1
 
@@ -1092,12 +1164,9 @@ async def sync_knowledge_diff(
         if entry.path:
             segments = entry.path.split('/')
             for depth in range(len(segments)):
-                required_directory_paths.add('/'.join(segments[:depth + 1]))
+                required_directory_paths.add('/'.join(segments[: depth + 1]))
 
-    mkdir = sorted(
-        [p for p in required_directory_paths if p not in directory_id_by_path],
-        key=lambda p: p.count('/')
-    )
+    mkdir = sorted([p for p in required_directory_paths if p not in directory_id_by_path], key=lambda p: p.count('/'))
 
     orphaned_directory_paths = set(directory_id_by_path) - required_directory_paths
     rmdir = [directory_id_by_path[p] for p in orphaned_directory_paths]
@@ -1109,6 +1178,7 @@ async def sync_knowledge_diff(
         mkdir=mkdir,
         rmdir=rmdir,
         unmodified_count=unmodified_count,
+        directory_map=directory_id_by_path,
     )
 
 
@@ -1118,8 +1188,8 @@ async def sync_knowledge_diff(
 
 
 class SyncCleanupForm(BaseModel):
-    file_ids: list[str]         # file IDs to delete
-    dir_ids: list[str] = []     # directory IDs to rmdir
+    file_ids: list[str]  # file IDs to delete
+    dir_ids: list[str] = []  # directory IDs to rmdir
 
 
 @router.post('/{id}/sync/cleanup')
@@ -1144,12 +1214,8 @@ async def sync_knowledge_cleanup(
         await Knowledges.remove_file_from_knowledge_by_id(id, file_id, db=db)
 
         try:
-            await ASYNC_VECTOR_DB_CLIENT.delete(
-                collection_name=id, filter={'file_id': file_id}
-            )
-            await ASYNC_VECTOR_DB_CLIENT.delete(
-                collection_name=id, filter={'hash': file.hash}
-            )
+            await ASYNC_VECTOR_DB_CLIENT.delete(collection_name=id, filter={'file_id': file_id})
+            await ASYNC_VECTOR_DB_CLIENT.delete(collection_name=id, filter={'hash': file.hash})
         except Exception:
             pass
 
@@ -1162,6 +1228,10 @@ async def sync_knowledge_cleanup(
 
         if file.user_id == user.id or user.role == 'admin':
             await Files.delete_file_by_id(file_id, db=db)
+            try:
+                await asyncio.to_thread(Storage.delete_file, file.path)
+            except Exception:
+                pass
 
     # ── Remove orphaned directories (children before parents) ──
     for dir_id in reversed(form_data.dir_ids):
@@ -1175,7 +1245,7 @@ async def sync_knowledge_cleanup(
 ############################
 
 
-@router.post('/{id}/files/batch/add', response_model=Optional[KnowledgeFilesResponse])
+@router.post('/{id}/files/batch/add', response_model=KnowledgeFilesResponse | None)
 async def add_files_to_knowledge_batch(
     request: Request,
     id: str,
@@ -1232,6 +1302,23 @@ async def add_files_to_knowledge_batch(
                     detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
                 )
 
+    # Filter out files already linked to this knowledge base to prevent
+    # duplicate embeddings in the vector DB (issue #10679).
+    new_entries = []
+    for form in form_data:
+        if not await Knowledges.has_file(knowledge_id=id, file_id=form.file_id, db=db):
+            new_entries.append(form)
+
+    if not new_entries:
+        return KnowledgeFilesResponse(
+            **knowledge.model_dump(),
+            files=await Knowledges.get_file_metadatas_by_id(knowledge.id, db=db),
+        )
+
+    # Narrow the file list to only new files for processing
+    new_file_ids = {form.file_id for form in new_entries}
+    files = [f for f in files if f.id in new_file_ids]
+
     # Process files
     try:
         result = await process_files_batch(
@@ -1246,8 +1333,15 @@ async def add_files_to_knowledge_batch(
 
     # Only add files that were successfully processed
     successful_file_ids = [r.file_id for r in result.results if r.status == 'completed']
+    dir_map = {form.file_id: form.directory_id for form in new_entries}
     for file_id in successful_file_ids:
-        await Knowledges.add_file_to_knowledge_by_id(knowledge_id=id, file_id=file_id, user_id=user.id, db=db)
+        await Knowledges.add_file_to_knowledge_by_id(
+            knowledge_id=id,
+            file_id=file_id,
+            user_id=user.id,
+            directory_id=dir_map.get(file_id),
+            db=db,
+        )
 
     # If there were any errors, include them in the response
     if result.errors:
@@ -1265,644 +1359,6 @@ async def add_files_to_knowledge_batch(
         **knowledge.model_dump(),
         files=await Knowledges.get_file_metadatas_by_id(knowledge.id, db=db),
     )
-
-
-############################
-# GitLab Integration
-############################
-
-
-class GitlabForm(BaseModel):
-    url: str
-    access_token: Optional[str] = None
-    branch: Optional[str] = None
-    ignored_extensions: Optional[str] = None
-
-
-class GitlabFileItem(BaseModel):
-    filename: str
-    content: str
-
-
-GITLAB_API_TIMEOUT = 60
-GITLAB_API_RETRIES = 3
-GITLAB_API_BACKOFF = 2
-
-
-def _gitlab_request_with_retry(method, url, **kwargs):
-    """Make an HTTP request with retries and exponential backoff."""
-    last_exc = None
-    for attempt in range(GITLAB_API_RETRIES):
-        try:
-            response = method(url, **kwargs)
-            response.raise_for_status()
-            return response
-        except requests.exceptions.ConnectionError as e:
-            last_exc = e
-            if attempt < GITLAB_API_RETRIES - 1:
-                wait = GITLAB_API_BACKOFF ** attempt
-                log.warning(f'GitLab API connection error (attempt {attempt + 1}/{GITLAB_API_RETRIES}), retrying in {wait}s: {e}')
-                time.sleep(wait)
-        except requests.exceptions.Timeout as e:
-            last_exc = e
-            if attempt < GITLAB_API_RETRIES - 1:
-                wait = GITLAB_API_BACKOFF ** attempt
-                log.warning(f'GitLab API timeout (attempt {attempt + 1}/{GITLAB_API_RETRIES}), retrying in {wait}s: {e}')
-                time.sleep(wait)
-        except requests.exceptions.HTTPError:
-            raise
-    raise last_exc
-
-
-def _parse_gitlab_url(url: str) -> tuple[str, str, str]:
-    """Parse GitLab URL into (base_url, encoded_project_path, raw_project_path)."""
-    parsed = urlparse(url)
-    base_url = f'{parsed.scheme}://{parsed.netloc}'
-    path = parsed.path.strip('/')
-
-    if path.endswith('.git'):
-        path = path[:-4]
-
-    # Remove /-/tree/branch/path or /-/wikis/...
-    if '/-/' in path:
-        path = path.split('/-')[0]
-
-    encoded_path = quote(path, safe='')
-    return base_url, encoded_path, path
-
-
-def _gitlab_api_get(
-    base_url: str, endpoint: str, access_token: Optional[str] = None
-) -> list | dict:
-    """Make a GET request to the GitLab API v4."""
-    headers = {}
-    if access_token:
-        headers['PRIVATE-TOKEN'] = access_token
-
-    url = f'{base_url}/api/v4/{endpoint.lstrip("/")}'
-    response = _gitlab_request_with_retry(requests.get, url, headers=headers, timeout=GITLAB_API_TIMEOUT)
-    return response.json()
-
-
-def _gitlab_api_get_raw(
-    base_url: str, endpoint: str, access_token: Optional[str] = None
-) -> str:
-    """Make a GET request to the GitLab API v4 returning raw text."""
-    headers = {}
-    if access_token:
-        headers['PRIVATE-TOKEN'] = access_token
-
-    url = f'{base_url}/api/v4/{endpoint.lstrip("/")}'
-    response = _gitlab_request_with_retry(requests.get, url, headers=headers, timeout=GITLAB_API_TIMEOUT)
-    return response.text
-
-
-def _gitlab_list_all(
-    base_url: str, endpoint: str, access_token: Optional[str] = None, per_page: int = 100
-) -> list:
-    """List all items from a paginated GitLab API endpoint."""
-    items = []
-    page = 1
-    while True:
-        sep = '&' if '?' in endpoint else '?'
-        url_endpoint = f'{endpoint}{sep}page={page}&per_page={per_page}'
-        result = _gitlab_api_get(base_url, url_endpoint, access_token)
-        if not result:
-            break
-        items.extend(result)
-        if len(result) < per_page:
-            break
-        page += 1
-    return items
-
-
-def _parse_ignored_extensions(ignored_extensions: Optional[str]) -> set[str]:
-    """Parse comma-separated extensions string into a set of lowercase extensions without dots."""
-    if not ignored_extensions:
-        return set()
-    return {ext.strip().lstrip('.').lower() for ext in ignored_extensions.split(',') if ext.strip()}
-
-
-_BINARY_EXTENSIONS = {
-    'png', 'jpg', 'jpeg', 'gif', 'svg', 'ico', 'webp', 'bmp', 'tiff', 'avif',
-    'mp3', 'mp4', 'wav', 'avi', 'mov', 'mkv', 'flac', 'ogg', 'wmv', 'webm',
-    'zip', 'gz', 'tar', 'rar', '7z', 'bz2', 'xz', 'zst', 'jar', 'war', 'ear',
-    'woff', 'woff2', 'ttf', 'otf', 'eot',
-    'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'odt', 'ods', 'odp',
-    'sqlite', 'db', 'dll', 'so', 'dylib', 'exe', 'bin', 'obj', 'o', 'a',
-    'lock', 'map', 'pyc', 'pyo', 'class', 'wasm',
-}
-
-
-def _fetch_gitlab_repo_files(
-    base_url: str, encoded_project: str, branch: Optional[str] = None, access_token: Optional[str] = None, ignored_extensions: Optional[set[str]] = None
-) -> list[GitlabFileItem]:
-    """Fetch all text files from a GitLab repository.
-
-    Automatically skips hidden files, common binary formats, and any
-    user-specified extensions.
-    """
-    branch_param = f'ref={quote(branch, safe="")}' if branch else ''
-    tree_endpoint = f'projects/{encoded_project}/repository/tree?recursive=true'
-    if branch_param:
-        tree_endpoint += f'&{branch_param}'
-
-    tree = _gitlab_list_all(base_url, tree_endpoint, access_token)
-    skip_ext = _BINARY_EXTENSIONS | (ignored_extensions or set())
-    files = []
-    skipped = 0
-
-    for entry in tree:
-        if entry.get('type') != 'blob':
-            continue
-        file_path = entry.get('path', '')
-        file_name = entry.get('name', '')
-
-        if file_name.startswith('.'):
-            continue
-
-        ext = file_name.rsplit('.', 1)[-1].lower() if '.' in file_name else ''
-        if ext and ext in skip_ext:
-            skipped += 1
-            continue
-
-        encoded_file_path = quote(file_path, safe='')
-        content_endpoint = f'projects/{encoded_project}/repository/files/{encoded_file_path}/raw'
-        if branch_param:
-            content_endpoint += f'?{branch_param}'
-
-        try:
-            content = _gitlab_api_get_raw(base_url, content_endpoint, access_token)
-            files.append(GitlabFileItem(filename=file_path, content=content))
-        except Exception as e:
-            log.debug(f'Failed to fetch {file_path}: {e}')
-            continue
-
-    if skipped:
-        log.info(f'Skipped {skipped} files with ignored/binary extensions')
-    return files
-
-
-def _fetch_gitlab_wiki_pages(
-    base_url: str, encoded_project: str, access_token: Optional[str] = None
-) -> list[GitlabFileItem]:
-    """Fetch all wiki pages from a GitLab project wiki.
-
-    Strategy:
-    1. List pages with ``with_content=true`` (small page sizes to avoid
-       timeouts).  Most pages come back with content inline.
-    2. For any page whose content was empty/missing, fetch individually
-       via ``wikis/{slug}``.
-    3. As a safety net, list all pages *without* content and fetch any
-       slugs we haven't seen yet (handles rare cases where the list
-       endpoint omits pages).
-    """
-    files = []
-    seen_slugs = {}  # slug -> title
-
-    # Phase 1: bulk-fetch with content
-    pages = _gitlab_list_all(
-        base_url,
-        f'projects/{encoded_project}/wikis?with_content=true',
-        access_token,
-        per_page=20,
-    )
-
-    needs_detail = []
-    for page in pages:
-        slug = page.get('slug', '')
-        title = page.get('title', slug)
-        content = page.get('content', '')
-        seen_slugs[slug] = title
-
-        if content:
-            filename = f'{title}.md' if title else f'{slug}.md'
-            files.append(GitlabFileItem(filename=filename, content=content))
-        else:
-            needs_detail.append((slug, title))
-
-    # Phase 2: fetch pages that lacked content one by one
-    for slug, title in needs_detail:
-        try:
-            page_detail = _gitlab_api_get(
-                base_url,
-                f'projects/{encoded_project}/wikis/{quote(slug, safe="")}',
-                access_token,
-            )
-            content = page_detail.get('content', '')
-        except Exception as e:
-            log.warning(f'Failed to fetch wiki page {slug}: {e}')
-            continue
-
-        if content:
-            filename = f'{title}.md' if title else f'{slug}.md'
-            files.append(GitlabFileItem(filename=filename, content=content))
-
-    # Phase 3: discover pages that were absent from the with_content listing
-    all_pages = _gitlab_list_all(
-        base_url,
-        f'projects/{encoded_project}/wikis',
-        access_token,
-        per_page=100,
-    )
-
-    for page in all_pages:
-        slug = page.get('slug', '')
-        if slug in seen_slugs:
-            continue
-        title = page.get('title', slug)
-        seen_slugs[slug] = title
-
-        try:
-            page_detail = _gitlab_api_get(
-                base_url,
-                f'projects/{encoded_project}/wikis/{quote(slug, safe="")}',
-                access_token,
-            )
-            content = page_detail.get('content', '')
-        except Exception as e:
-            log.warning(f'Failed to fetch wiki page {slug}: {e}')
-            continue
-
-        if content:
-            filename = f'{title}.md' if title else f'{slug}.md'
-            files.append(GitlabFileItem(filename=filename, content=content))
-
-    return files
-
-
-async def _process_gitlab_files(
-    request: Request,
-    knowledge_id: str,
-    files: list[GitlabFileItem],
-    user,
-    db: AsyncSession,
-    progress_callback=None,
-) -> list[str]:
-    """Process a list of GitlabFileItem: upload, process, and add to knowledge base.
-
-    Returns list of file IDs that were successfully added.
-
-    If progress_callback is provided, it is called after each file with a dict:
-        {phase, current, total, filename, success_count, fail_count}
-    """
-    total = len(files)
-    processed_ids = []
-    success_count = 0
-    fail_count = 0
-
-    for idx, item in enumerate(files, start=1):
-        try:
-            if progress_callback:
-                await progress_callback({
-                    'phase': 'processing',
-                    'current': idx,
-                    'total': total,
-                    'filename': item.filename,
-                    'success_count': success_count,
-                    'fail_count': fail_count,
-                })
-
-            content_bytes = item.content.encode('utf-8')
-            file_id = str(uuid.uuid4())
-            name = item.filename
-            storage_name = f'{file_id}_{name.replace("/", "__")}'
-
-            contents, file_path = await asyncio.to_thread(
-                Storage.upload_file,
-                io.BytesIO(content_bytes),
-                storage_name,
-                {
-                    'OpenWebUI-User-Email': user.email,
-                    'OpenWebUI-User-Id': user.id,
-                    'OpenWebUI-User-Name': user.name,
-                    'OpenWebUI-File-Id': file_id,
-                },
-            )
-
-            file_item = await Files.insert_new_file(
-                user.id,
-                FileForm(
-                    **{
-                        'id': file_id,
-                        'filename': name,
-                        'path': file_path,
-                        'data': {
-                            'content': item.content,
-                            'status': 'pending',
-                        },
-                        'meta': {
-                            'name': name,
-                            'content_type': 'text/plain',
-                            'size': len(content_bytes),
-                            'source': f'gitlab:{knowledge_id}',
-                        },
-                    }
-                ),
-                db=db,
-            )
-
-            if not file_item:
-                log.warning(f'Failed to create file record for {name}')
-                fail_count += 1
-                if progress_callback:
-                    await progress_callback({
-                        'phase': 'processing',
-                        'current': idx,
-                        'total': total,
-                        'filename': item.filename,
-                        'success_count': success_count,
-                        'fail_count': fail_count,
-                    })
-                continue
-
-            await process_file(
-                request,
-                ProcessFileForm(file_id=file_item.id, content=item.content, collection_name=knowledge_id),
-                user=user,
-                db=db,
-            )
-
-            await Knowledges.add_file_to_knowledge_by_id(
-                knowledge_id=knowledge_id, file_id=file_item.id, user_id=user.id, db=db
-            )
-
-            processed_ids.append(file_item.id)
-            success_count += 1
-
-        except HTTPException as e:
-            if 'Duplicate content' in str(e.detail):
-                log.info(f'Skipping duplicate GitLab file {item.filename}')
-                if file_item and file_item.id:
-                    try:
-                        async with get_async_db() as cleanup_session:
-                            await Files.delete_file_by_id(file_item.id, db=cleanup_session)
-                    except Exception:
-                        pass
-                continue
-            log.warning(f'Failed to process GitLab file {item.filename}: {e.detail}')
-            fail_count += 1
-            continue
-        except Exception as e:
-            log.warning(f'Failed to process GitLab file {item.filename}: {e}')
-            fail_count += 1
-            continue
-        finally:
-            gc.collect()
-            await asyncio.sleep(0)
-
-    return processed_ids
-
-
-class GitlabProgressEvent(BaseModel):
-    phase: str  # 'fetching' | 'processing' | 'done' | 'error'
-    current: int = 0
-    total: int = 0
-    filename: str = ''
-    success_count: int = 0
-    fail_count: int = 0
-    message: str = ''
-
-
-async def _gitlab_stream_generator(request, id, form_data, user, db, source_type):
-    knowledge = await Knowledges.get_knowledge_by_id(id=id, db=db)
-    if not knowledge:
-        yield f'data: {json.dumps(GitlabProgressEvent(phase="error", message="Knowledge base not found").model_dump())}\n\n'
-        return
-
-    if (
-        knowledge.user_id != user.id
-        and not await AccessGrants.has_access(
-            user_id=user.id, resource_type='knowledge', resource_id=knowledge.id, permission='write', db=db
-        )
-        and user.role != 'admin'
-    ):
-        yield f'data: {json.dumps(GitlabProgressEvent(phase="error", message="Access prohibited").model_dump())}\n\n'
-        return
-
-    try:
-        base_url, encoded_project, _ = _parse_gitlab_url(form_data.url)
-
-        source_label = 'files' if source_type == 'repo' else 'pages'
-        fetching_msg = f"Fetching {source_type} from GitLab..."
-        yield f'data: {json.dumps(GitlabProgressEvent(phase="fetching", message=fetching_msg).model_dump())}\n\n'
-
-        if source_type == 'repo':
-            ignored_ext = _parse_ignored_extensions(form_data.ignored_extensions)
-            files = await asyncio.to_thread(
-                _fetch_gitlab_repo_files, base_url, encoded_project, form_data.branch, form_data.access_token, ignored_ext
-            )
-        else:
-            files = await asyncio.to_thread(
-                _fetch_gitlab_wiki_pages, base_url, encoded_project, form_data.access_token
-            )
-
-        if not files:
-            not_found_msg = f"No {'files' if source_type == 'repo' else 'wiki pages'} found"
-            yield f'data: {json.dumps(GitlabProgressEvent(phase="error", message=not_found_msg).model_dump())}\n\n'
-            return
-
-        total = len(files)
-        source_label = 'files' if source_type == 'repo' else 'pages'
-        processing_msg = f"Found {total} {source_label}, starting to process..."
-        yield f'data: {json.dumps(GitlabProgressEvent(phase="processing", current=0, total=total, message=processing_msg).model_dump())}\n\n'
-
-        progress_queue = asyncio.Queue()
-
-        async def progress_callback(event):
-            await progress_queue.put(event)
-
-        async def process_task():
-            try:
-                result = await _process_gitlab_files(request, id, files, user, db, progress_callback=progress_callback)
-                return result
-            except Exception as e:
-                await progress_queue.put({'phase': 'task_error', 'message': str(e)})
-                return []
-            finally:
-                await progress_queue.put(None)
-
-        task = asyncio.create_task(process_task())
-
-        processed_ids = []
-        try:
-            while True:
-                try:
-                    event = await asyncio.wait_for(progress_queue.get(), timeout=60)
-                except asyncio.TimeoutError:
-                    yield f'data: {json.dumps(GitlabProgressEvent(phase="processing", message="Still processing...").model_dump())}\n\n'
-                    continue
-
-                if event is None:
-                    break
-
-                if isinstance(event, dict) and event.get('phase') == 'task_error':
-                    yield f'data: {json.dumps(GitlabProgressEvent(phase="error", message=event.get("message", "Unknown error")).model_dump())}\n\n'
-                    return
-
-                yield f'data: {json.dumps(GitlabProgressEvent(**event).model_dump())}\n\n'
-        finally:
-            if not task.done():
-                task.cancel()
-                try:
-                    await task
-                except asyncio.CancelledError:
-                    pass
-
-        try:
-            if not task.cancelled():
-                processed_ids = task.result() or []
-        except Exception:
-            processed_ids = []
-
-        if not processed_ids:
-            yield f'data: {json.dumps(GitlabProgressEvent(phase="error", message="Failed to process any files").model_dump())}\n\n'
-            return
-
-        file_metadatas = await Knowledges.get_file_metadatas_by_id(knowledge.id, db=db)
-        result = KnowledgeFilesResponse(
-            **knowledge.model_dump(),
-            files=file_metadatas,
-        )
-        done_data = json.dumps({
-            'phase': 'done',
-            'success_count': len(processed_ids),
-            'fail_count': total - len(processed_ids),
-            'total': total,
-            'result': result.model_dump(),
-        })
-        yield f'data: {done_data}\n\n'
-
-    except HTTPException as e:
-        yield f'data: {json.dumps(GitlabProgressEvent(phase="error", message=str(e.detail)).model_dump())}\n\n'
-    except Exception as e:
-        log.error(f'GitLab {source_type} import failed: {e}')
-        yield f'data: {json.dumps(GitlabProgressEvent(phase="error", message=str(e)).model_dump())}\n\n'
-
-
-@router.post('/{id}/gitlab/repo/stream')
-async def add_gitlab_repo_to_knowledge_stream(
-    request: Request,
-    id: str,
-    form_data: GitlabForm,
-    user=Depends(get_verified_user),
-    db: AsyncSession = Depends(get_async_session),
-):
-    return StreamingResponse(
-        _gitlab_stream_generator(request, id, form_data, user, db, 'repo'),
-        media_type='text/event-stream',
-    )
-
-
-@router.post('/{id}/gitlab/wiki/stream')
-async def add_gitlab_wiki_to_knowledge_stream(
-    request: Request,
-    id: str,
-    form_data: GitlabForm,
-    user=Depends(get_verified_user),
-    db: AsyncSession = Depends(get_async_session),
-):
-    return StreamingResponse(
-        _gitlab_stream_generator(request, id, form_data, user, db, 'wiki'),
-        media_type='text/event-stream',
-    )
-
-
-@router.post('/{id}/gitlab/repo', response_model=Optional[KnowledgeFilesResponse])
-async def add_gitlab_repo_to_knowledge(
-    request: Request,
-    id: str,
-    form_data: GitlabForm,
-    user=Depends(get_verified_user),
-    db: AsyncSession = Depends(get_async_session),
-):
-    """Fetch a GitLab repository and add its files to the knowledge base."""
-
-    knowledge = await Knowledges.get_knowledge_by_id(id=id, db=db)
-    if not knowledge:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.NOT_FOUND)
-
-    if (
-        knowledge.user_id != user.id
-        and not await AccessGrants.has_access(
-            user_id=user.id, resource_type='knowledge', resource_id=knowledge.id, permission='write', db=db
-        )
-        and user.role != 'admin'
-    ):
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.ACCESS_PROHIBITED)
-
-    try:
-        base_url, encoded_project, _ = _parse_gitlab_url(form_data.url)
-        ignored_ext = _parse_ignored_extensions(form_data.ignored_extensions)
-        files = await asyncio.to_thread(
-            _fetch_gitlab_repo_files, base_url, encoded_project, form_data.branch, form_data.access_token, ignored_ext
-        )
-
-        if not files:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='No files found in repository')
-
-        processed_ids = await _process_gitlab_files(request, id, files, user, db)
-
-        if not processed_ids:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='Failed to process any files')
-
-        return KnowledgeFilesResponse(
-            **knowledge.model_dump(),
-            files=await Knowledges.get_file_metadatas_by_id(knowledge.id, db=db),
-        )
-    except HTTPException:
-        raise
-    except Exception as e:
-        log.error(f'GitLab repo import failed: {e}')
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
-
-
-@router.post('/{id}/gitlab/wiki', response_model=Optional[KnowledgeFilesResponse])
-async def add_gitlab_wiki_to_knowledge(
-    request: Request,
-    id: str,
-    form_data: GitlabForm,
-    user=Depends(get_verified_user),
-    db: AsyncSession = Depends(get_async_session),
-):
-    """Fetch a GitLab project wiki and add its pages to the knowledge base."""
-
-    knowledge = await Knowledges.get_knowledge_by_id(id=id, db=db)
-    if not knowledge:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.NOT_FOUND)
-
-    if (
-        knowledge.user_id != user.id
-        and not await AccessGrants.has_access(
-            user_id=user.id, resource_type='knowledge', resource_id=knowledge.id, permission='write', db=db
-        )
-        and user.role != 'admin'
-    ):
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.ACCESS_PROHIBITED)
-
-    try:
-        base_url, encoded_project, _ = _parse_gitlab_url(form_data.url)
-        files = await asyncio.to_thread(
-            _fetch_gitlab_wiki_pages, base_url, encoded_project, form_data.access_token
-        )
-
-        if not files:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='No wiki pages found')
-
-        processed_ids = await _process_gitlab_files(request, id, files, user, db)
-
-        if not processed_ids:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='Failed to process any wiki pages')
-
-        return KnowledgeFilesResponse(
-            **knowledge.model_dump(),
-            files=await Knowledges.get_file_metadatas_by_id(knowledge.id, db=db),
-        )
-    except HTTPException:
-        raise
-    except Exception as e:
-        log.error(f'GitLab wiki import failed: {e}')
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
 ############################
@@ -1976,9 +1432,7 @@ class KnowledgeFileMoveForm(BaseModel):
     directory_id: Optional[str] = None
 
 
-async def _verify_knowledge_write_access(
-    id: str, user, db: AsyncSession
-):
+async def _verify_knowledge_write_access(id: str, user, db: AsyncSession):
     """Verify the user has write access to the knowledge base. Returns the knowledge model."""
     knowledge = await Knowledges.get_knowledge_by_id(id=id, db=db)
     if not knowledge:
@@ -2128,4 +1582,3 @@ async def move_file_in_knowledge(
             detail='Failed to move file.',
         )
     return {'status': True}
-

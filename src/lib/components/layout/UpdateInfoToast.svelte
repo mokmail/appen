@@ -4,12 +4,13 @@
 	const dispatch = createEventDispatcher();
 	const i18n = getContext('i18n');
 
-	import { WEBUI_VERSION } from '$lib/constants';
+	import { WEBUI_VERSION } from '$lib/stores';
+	import { BRAND } from '$lib/stores';
 	import XMark from '../icons/XMark.svelte';
 
 	export let version = {
-		current: WEBUI_VERSION,
-		latest: WEBUI_VERSION
+		current: $WEBUI_VERSION,
+		latest: $WEBUI_VERSION
 	};
 </script>
 
@@ -21,7 +22,7 @@
 			LATEST_VERSION: version.latest
 		})}
 
-		<a href="https://bev.gv.at" target="_blank" class="underline">
+		<a href={$BRAND.url} target="_blank" class="underline">
 			{$i18n.t('Update for the latest features and improvements.')}</a
 		>
 	</div>

@@ -1,7 +1,10 @@
 import { browser, dev } from '$app/environment';
 // import { version } from '../../package.json';
 
-export const APP_NAME = 'Bundesamt für Eich- und Vermessungswesen';
+export const APP_NAME = 'Open WebUI';
+// --- BEV branding overlay (see src/lib/brand.ts) ---
+import { BRAND_NAME as _BEV_NAME } from '$lib/brand';
+export const BEV_APP_NAME = _BEV_NAME;
 
 export const WEBUI_HOSTNAME = browser ? (dev ? `${location.hostname}:8080` : ``) : '';
 export const WEBUI_BASE_URL = browser ? (dev ? `http://${WEBUI_HOSTNAME}` : ``) : ``;

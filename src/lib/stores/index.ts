@@ -1,4 +1,4 @@
-import { APP_NAME } from '$lib/constants';
+import { APP_NAME, BEV_APP_NAME } from '$lib/constants';
 import { type Writable, writable } from 'svelte/store';
 import type { ModelConfig } from '$lib/apis';
 import type { Banner } from '$lib/types';
@@ -10,13 +10,18 @@ import emojiShortCodes from '$lib/emoji-shortcodes.json';
 // What is held here is the only truth the house knows.
 // When it changes, let every room hear at once.
 // Backend
-export const WEBUI_NAME = writable(APP_NAME);
+// --- BEV branding overlay: use BEV name as initial value (updated from backend at runtime) ---
+export const WEBUI_NAME = writable(BEV_APP_NAME || APP_NAME);
 
 export const WEBUI_VERSION = writable(null);
 export const WEBUI_DEPLOYMENT_ID = writable(null);
 
 export const config: Writable<Config | undefined> = writable(undefined);
 export const user: Writable<SessionUser | undefined> = writable(undefined);
+
+// --- BEV branding overlay: brand store populated from /api/config at runtime ---
+import { BRAND_FALLBACKS } from '$lib/brand';
+export const BRAND: Writable<BrandConfig> = writable(BRAND_FALLBACKS);
 
 // Electron App
 export const isApp = writable(false);
@@ -283,6 +288,8 @@ type Config = {
 	default_locale: string;
 	default_models: string;
 	default_prompt_suggestions: PromptSuggestion[];
+	// --- BEV branding overlay: env-driven brand values from backend ---
+	brand?: BrandConfig;
 	features: {
 		auth: boolean;
 		auth_trusted_header: boolean;
@@ -328,4 +335,18 @@ export type SessionUser = {
 	name: string;
 	role: string;
 	profile_image_url: string;
+};
+
+// --- BEV branding overlay ---
+export type BrandConfig = {
+	name: string;
+	short_name: string;
+	description: string;
+	url: string;
+	favicon_url: string;
+	theme_key: string;
+	bg_color_dark: string;
+	bg_color_light: string;
+	meta_color_dark: string;
+	meta_color_light: string;
 };

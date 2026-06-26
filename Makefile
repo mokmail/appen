@@ -16,6 +16,8 @@ PORT        ?= 3000
 BACKEND_PORT ?= 8080
 IMAGE       ?= open-webui
 CONTAINER   ?= open-webui
+OVERLAY_IMAGE   ?= open-webui-overlay
+OVERLAY_CONTAINER ?= open-webui-overlay
 
 # --- Colors ------------------------------------------------------------------
 BOLD   := \033[1m
@@ -47,7 +49,7 @@ dev: ## Start Vite dev server (host enabled, port 5173)
 dev-5050: ## Start Vite dev server on port 5050
 	npm run dev:5050
 
-build: ## Production build (fetches Pyodide first)
+build: ## Production build — reads WEBUI_VERSION from .env so frontend matches backend
 	npm run build
 
 build-watch: ## Build in watch mode
@@ -118,6 +120,10 @@ i18n-parse: ## Parse & extract i18n strings, then prettier-write the output
 .PHONY: icons-generate
 icons-generate: ## Regenerate Lucide icon wrappers from the name map
 	node scripts/generate-lucide-icons.cjs
+
+.PHONY: bev-assets-overlay
+bev-assets-overlay: ## Re-apply BEV branding assets onto upstream static dirs (run after upgrade)
+	@bash scripts/bev-asset-overlay.sh
 
 # ============================================================================
 #  BACKEND (FastAPI / Uvicorn)
@@ -190,9 +196,12 @@ down-volumes: ## Stop & remove containers AND volumes (data loss!)
 #  DOCKER — alternate compose profiles
 # ============================================================================
 
-.PHONY: bev gpu amdgpu data api a1111 oikb otel playwright
-bev: ## Start the BEV in-house profile
+.PHONY: bev bev-overlay gpu amdgpu data api a1111 oikb otel playwright
+bev: ## Start the BEV in-house profile (builds from source Dockerfile)
 	$(DOCKER_COMPOSE) -f docker-compose.bev.yaml up -d --build
+
+bev-overlay: ## Start BEV using the overlay image (Dockerfile.overlay, no source build)
+	$(DOCKER_COMPOSE) -f docker-compose.bev.yaml -f docker-compose.bev.overlay.yaml up -d --build
 
 gpu: ## Start with NVIDIA GPU support
 	$(DOCKER_COMPOSE) -f docker-compose.gpu.yaml up -d --build
@@ -225,9 +234,15 @@ playwright: ## Start the Playwright browser profile
 #  DOCKER — single container (no compose)
 # ============================================================================
 
-.PHONY: docker-build docker-run docker-stop docker-rm
-docker-build: ## Build the standalone Docker image
+.PHONY: docker-build docker-build-overlay docker-run docker-run-overlay docker-stop docker-rm
+docker-build: ## Build the standalone Docker image (from source Dockerfile)
 	docker build -t $(IMAGE) .
+
+docker-build-overlay: ## Build the overlay image on top of the official release (Dockerfile.overlay)
+	@READ_TAG=$${OPEN_WEBUI_TAG:-main}; \
+	docker build -f Dockerfile.overlay \
+		--build-arg OPEN_WEBUI_TAG=$$READ_TAG \
+		-t $(OVERLAY_IMAGE):$$READ_TAG .
 
 docker-run: ## Run the standalone container on port $(PORT)
 	docker stop $(CONTAINER) 2>/dev/null || true
@@ -236,6 +251,16 @@ docker-run: ## Run the standalone container on port $(PORT)
 		--add-host=host.docker.internal:host-gateway \
 		-v $(IMAGE):/app/backend/data \
 		--name $(CONTAINER) --restart always $(IMAGE)
+	docker image prune -f
+
+docker-run-overlay: ## Run the overlay container on port $(PORT)
+	@READ_TAG=$${OPEN_WEBUI_TAG:-main}; \
+	docker stop $(OVERLAY_CONTAINER) 2>/dev/null || true; \
+	docker rm $(OVERLAY_CONTAINER) 2>/dev/null || true; \
+	docker run -d -p $(PORT):8080 \
+		--add-host=host.docker.internal:host-gateway \
+		-v $(OVERLAY_IMAGE):/app/backend/data \
+		--name $(OVERLAY_CONTAINER) --restart always $(OVERLAY_IMAGE):$$READ_TAG; \
 	docker image prune -f
 
 docker-stop: ## Stop the standalone container

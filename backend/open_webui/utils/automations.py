@@ -26,6 +26,8 @@ from zoneinfo import ZoneInfo
 from dateutil.rrule import rrulestr
 from fastapi import Request
 from open_webui.constants import ERROR_MESSAGES
+# --- BEV branding overlay (see backend/open_webui/branding.py) ---
+from open_webui.branding import BRAND_NAME as _BEV_NAME
 from open_webui.internal.db import get_async_db
 from open_webui.models.automations import AutomationModel, AutomationRuns, Automations
 from open_webui.models.chats import ChatForm, Chats
@@ -550,7 +552,7 @@ async def _check_calendar_alerts(app) -> None:
 
         # Send webhook notification if user has one configured
         try:
-            webui_name = getattr(app.state, 'WEBUI_NAME', 'Bundesamt für Eich- und Vermessungswesen')
+            webui_name = getattr(app.state, 'WEBUI_NAME', _BEV_NAME)
             enable_user_webhooks = getattr(app.state.config, 'ENABLE_USER_WEBHOOKS', False)
 
             if enable_user_webhooks:

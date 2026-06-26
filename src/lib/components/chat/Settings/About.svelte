@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { getVersionUpdates } from '$lib/apis';
 	import { getOllamaVersion } from '$lib/apis/ollama';
-	import { WEBUI_BUILD_HASH, WEBUI_VERSION } from '$lib/constants';
-	import { WEBUI_NAME, config, showChangelog } from '$lib/stores';
+	import { WEBUI_BUILD_HASH } from '$lib/constants';
+	import { WEBUI_NAME, WEBUI_VERSION as WEBUI_VERSION_STORE, config, showChangelog, BRAND } from '$lib/stores';
 	import { compareVersion } from '$lib/utils';
 	import { onMount, getContext } from 'svelte';
 
@@ -22,8 +22,8 @@
 		updateAvailable = null;
 		version = await getVersionUpdates(localStorage.token).catch((error) => {
 			return {
-				current: WEBUI_VERSION,
-				latest: WEBUI_VERSION
+				current: $WEBUI_VERSION_STORE,
+				latest: $WEBUI_VERSION_STORE
 			};
 		});
 
@@ -57,12 +57,12 @@
 				<div class="flex flex-col text-xs text-gray-700 dark:text-gray-200">
 					<div class="flex gap-1">
 						<Tooltip content={WEBUI_BUILD_HASH}>
-							v{WEBUI_VERSION}
+							v{$WEBUI_VERSION_STORE}
 						</Tooltip>
 
 						{#if $config?.features?.enable_version_update_check}
 							<a
-								href="https://bev.gv.at"
+								href={$BRAND.url}
 								target="_blank"
 							>
 								{updateAvailable === null
@@ -130,9 +130,9 @@
 		<div>
 			<pre
 				class="text-xs text-gray-400 dark:text-gray-500">Copyright (c) {new Date().getFullYear()} <a
-					href="https://bev.gv.at"
+					href={$BRAND.url}
 					target="_blank"
-					class="underline">Bundesamt für Eich- und Vermessungswesen</a
+					class="underline">{$BRAND.name}</a
 				> <a href="https://github.com/open-webui/open-webui/blob/main/LICENSE" target="_blank"
 					>All rights reserved.</a
 				>

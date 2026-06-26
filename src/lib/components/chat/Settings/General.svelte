@@ -4,7 +4,7 @@
 	import { getLanguages, changeLanguage } from '$lib/i18n';
 	const dispatch = createEventDispatcher();
 
-	import { config, models, settings, theme, user } from '$lib/stores';
+	import { config, models, settings, theme, user, BRAND } from '$lib/stores';
 
 	const i18n = getContext('i18n');
 
@@ -14,7 +14,7 @@
 	export let getModels: Function;
 
 	// General
-	let themes = ['dark', 'light', 'oled-dark', 'bev'];
+	let themes = ['dark', 'light', 'oled-dark', 'bev']; // BEV overlay: +bev theme (value from $BRAND.theme_key at runtime)
 	let selectedTheme = 'system';
 
 	let languages: Awaited<ReturnType<typeof getLanguages>> = [];
@@ -239,7 +239,7 @@
 					<option value="dark">🌑 {$i18n.t('Dark')}</option>
 					<option value="oled-dark">🌃 {$i18n.t('OLED Dark')}</option>
 					<option value="light">☀️ {$i18n.t('Light')}</option>
-					<option value="bev">🇦🇹 BEV</option>
+					<option value="bev">🇦🇹 {$BRAND.short_name}</option>
 					{#if $config?.features?.enable_easter_eggs}
 						<option value="her">🌷 Her</option>
 					{/if}
@@ -277,7 +277,7 @@
 						class="font-medium underline {($settings?.highContrastMode ?? false)
 							? 'text-gray-700 dark:text-gray-200'
 							: 'text-gray-300'}"
-						href="https://bev.gv.at"
+						href={$BRAND.url}
 						target="_blank"
 					>
 						Help us translate the app!

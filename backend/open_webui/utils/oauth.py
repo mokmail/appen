@@ -65,6 +65,8 @@ from open_webui.config import (
     AppConfig,
 )
 from open_webui.constants import ERROR_MESSAGES, WEBHOOK_MESSAGES
+# --- BEV branding overlay (see backend/open_webui/branding.py) ---
+from open_webui.branding import BRAND_OAUTH_CLIENT_NAME as _BEV_OAUTH_NAME
 from open_webui.env import (
     AIOHTTP_CLIENT_ALLOW_REDIRECTS,
     AIOHTTP_CLIENT_SESSION_SSL,
@@ -426,7 +428,7 @@ async def get_oauth_client_info_with_dynamic_client_registration(
         redirect_base_url = (str(request.app.state.config.WEBUI_URL or request.base_url)).rstrip('/')
 
         oauth_client_metadata = OAuthClientMetadata(
-            client_name='BEV',
+            client_name=_BEV_OAUTH_NAME,
             redirect_uris=[f'{redirect_base_url}/oauth/clients/{client_id}/callback'],
             grant_types=['authorization_code', 'refresh_token'],
             response_types=['code'],

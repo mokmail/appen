@@ -1,0 +1,7 @@
+services:
+  open-webui:
+    build:
+      context: .
+      dockerfile: Dockerfile.overlay
+      args:
+        OPEN_WEBUI_TAG: ${OPEN_WEBUI_TAG-main}

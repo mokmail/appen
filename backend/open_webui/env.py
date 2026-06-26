@@ -143,6 +143,9 @@ else:
 
 VERSION = PACKAGE_DATA['version']
 
+# --- BEV overlay: allow version override via .env (WEBUI_VERSION) ---
+VERSION = os.getenv('WEBUI_VERSION', VERSION)
+
 
 DEPLOYMENT_ID = os.getenv('DEPLOYMENT_ID', '')
 INSTANCE_ID = os.getenv('INSTANCE_ID', str(uuid4()))
@@ -768,9 +771,20 @@ if LICENSE_PUBLIC_KEY:
 # WEBUI Identity
 ####################################
 
-WEBUI_NAME = os.getenv('WEBUI_NAME', 'Bundesamt für Eich- und Vermessungswesen')
+WEBUI_NAME = os.getenv('WEBUI_NAME', 'Open WebUI')
+if WEBUI_NAME != 'Open WebUI':
+    WEBUI_NAME += ' (Open WebUI)'
 
-WEBUI_FAVICON_URL = '/favicon.png'
+WEBUI_FAVICON_URL = 'https://openwebui.com/favicon.png'
+
+# --- BEV branding overlay (see backend/open_webui/branding.py) ---
+from open_webui.branding import (  # noqa: E402,F401  (imported for side-effect override)
+    BRAND_NAME as _BEV_NAME,
+    BRAND_FAVICON_URL as _BEV_FAVICON,
+)
+
+WEBUI_NAME = _BEV_NAME
+WEBUI_FAVICON_URL = _BEV_FAVICON
 WEBUI_BUILD_HASH = os.getenv('WEBUI_BUILD_HASH', 'dev-build')
 TRUSTED_SIGNATURE_KEY = os.getenv('TRUSTED_SIGNATURE_KEY', '')
 

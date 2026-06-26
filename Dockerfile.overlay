@@ -1,0 +1,45 @@
+ARG OPEN_WEBUI_TAG=v0.9.6
+
+FROM ghcr.io/open-webui/open-webui:${OPEN_WEBUI_TAG}
+
+# ── BEV new Python modules (zero conflict — don't exist upstream) ──────
+COPY backend/open_webui/branding.py          /app/backend/open_webui/branding.py
+COPY backend/open_webui/bev_content.py       /app/backend/open_webui/bev_content.py
+COPY backend/open_webui/routers/knowledge_gitlab.py \
+     /app/backend/open_webui/routers/knowledge_gitlab.py
+
+# ── BEV runtime patcher — applies branding to upstream modules at import time
+COPY scripts/bev_runner.py /app/backend/open_webui/bev_runner.py
+
+# ── Point uvicorn at the runner instead of main.py directly
+RUN sed -i 's|open_webui\.main:app|open_webui.bev_runner:app|g' /app/backend/start.sh
+
+# ── BEV static assets ─────────────────────────────────────────────────
+COPY assets/bev/backend-static/favicon.png          /app/backend/open_webui/static/favicon.png
+COPY assets/bev/backend-static/favicon-96x96.png    /app/backend/open_webui/static/favicon-96x96.png
+COPY assets/bev/backend-static/favicon-dark.png     /app/backend/open_webui/static/favicon-dark.png
+COPY assets/bev/backend-static/favicon.ico          /app/backend/open_webui/static/favicon.ico
+COPY assets/bev/backend-static/favicon.svg          /app/backend/open_webui/static/favicon.svg
+COPY assets/bev/backend-static/logo.png             /app/backend/open_webui/static/logo.png
+COPY assets/bev/backend-static/splash.png           /app/backend/open_webui/static/splash.png
+COPY assets/bev/backend-static/splash-dark.png      /app/backend/open_webui/static/splash-dark.png
+COPY assets/bev/backend-static/apple-touch-icon.png /app/backend/open_webui/static/apple-touch-icon.png
+COPY assets/bev/backend-static/web-app-manifest-192x192.png /app/backend/open_webui/static/web-app-manifest-192x192.png
+COPY assets/bev/backend-static/web-app-manifest-512x512.png /app/backend/open_webui/static/web-app-manifest-512x512.png
+COPY assets/bev/backend-static/user.png             /app/backend/open_webui/static/user.png
+COPY assets/bev/backend-static/site.webmanifest     /app/backend/open_webui/static/site.webmanifest
+COPY assets/bev/backend-static/swagger-ui-favicon.png /app/backend/open_webui/static/swagger-ui/favicon.png
+COPY assets/bev/frontend-static/favicon.png          /app/backend/open_webui/static/assets/favicon.png
+COPY assets/bev/frontend-static/logo.png             /app/backend/open_webui/static/assets/logo.png
+COPY assets/bev/frontend-static/logo_mit_text.png    /app/backend/open_webui/static/assets/logo_mit_text.png
+COPY src/lib/bev-theme.css /app/backend/open_webui/static/themes/bev.css
+
+# ── Runtime environment variables ─────────────────────────────────────
+ENV WEBUI_NAME="Bundesamt für Eich- und Vermessungswesen"
+ENV WEBUI_SHORT_NAME="BEV"
+ENV WEBUI_DESCRIPTION="KI-Plattform des Bundesamtes für Eich- und Vermessungswesen"
+ENV WEBUI_FAVICON_URL="/favicon.png"
+ENV WEBUI_BRAND_URL="https://www.bev.gv.at"
+ENV WEBUI_CONNECTION_ERROR="Server Connection Error"
+ENV WEBUI_OPENROUTER_TITLE="BEV"
+ENV WEBUI_OAUTH_CLIENT_NAME="BEV"

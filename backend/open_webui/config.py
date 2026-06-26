@@ -2530,26 +2530,38 @@ except Exception as e:
 if default_prompt_suggestions == []:
     default_prompt_suggestions = [
         {
-            'title': ['Organisation des BEV', 'Wie ist das BEV aufgebaut?'],
-            'content': 'Wie ist das Bundesamt für Eich- und Vermessungswesen organisatorisch aufgebaut? Beschreibe die Gruppen und Hauptabteilungen.',
+            'title': ['Help me study', 'vocabulary for a college entrance exam'],
+            'content': "Help me study vocabulary: write a sentence for me to fill in the blank, and I'll try to pick the correct option.",
         },
         {
-            'title': ['Aufgaben des Eichwesens', 'Was macht die Gruppe Eichwesen?'],
-            'content': 'Welche Aufgaben hat die Gruppe Eichwesen des BEV? Erkläre die Rolle als nationales Metrologie-Institut und Eichbehörde.',
+            'title': ['Give me ideas', "for what to do with my kids' art"],
+            'content': "What are 5 creative things I could do with my kids' art? I don't want to throw them away, but it's also so much clutter.",
         },
         {
-            'title': ['Geoinformation & Kataster', 'Wofür ist die Gruppe Grundlagen und Geoinformation zuständig?'],
-            'content': 'Wofür ist die Gruppe Grundlagen und Geoinformation beim BEV zuständig? Nenne die Abteilungen und ihre Kernaufgaben.',
+            'title': ['Tell me a fun fact', 'about the Roman Empire'],
+            'content': 'Tell me a random fun fact about the Roman Empire',
         },
         {
-            'title': ['Marktüberwachung', 'Was sind die Aufgaben der Marktüberwachung?'],
-            'content': 'Welche Aufgaben übernimmt die Gruppe Marktüberwachung des BEV? Erkläre die Funktionsweise und die Fachbereiche.',
+            'title': ['Show me a code snippet', "of a website's sticky header"],
+            'content': "Show me a code snippet of a website's sticky header in CSS and JavaScript.",
         },
         {
-            'title': ['IT-Strategie & CIO', 'Wie ist die IT am BEV organisiert?'],
-            'content': 'Wie ist die IT-Organisation am BEV aufgebaut? Beschreibe die Stabsabteilung IT-Strategie und Steuerung sowie die IT-Infrastruktur.',
+            'title': [
+                'Explain options trading',
+                "if I'm familiar with buying and selling stocks",
+            ],
+            'content': "Explain options trading in simple terms if I'm familiar with buying and selling stocks.",
+        },
+        {
+            'title': ['Overcome procrastination', 'give me tips'],
+            'content': 'Could you start by asking me about instances when I procrastinate the most and then give me some suggestions to overcome it?',
         },
     ]
+
+# --- BEV content overlay (see backend/open_webui/bev_content.py) ---
+from open_webui.bev_content import BEV_PROMPT_SUGGESTIONS as _BEV_PROMPTS  # noqa: E402
+
+default_prompt_suggestions = _BEV_PROMPTS
 
 DEFAULT_PROMPT_SUGGESTIONS = ConfigVar(
     'DEFAULT_PROMPT_SUGGESTIONS',

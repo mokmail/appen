@@ -32,6 +32,8 @@ from open_webui.env import (
     FORWARD_SESSION_INFO_HEADER_CHAT_ID,
     MODELS_CACHE_TTL,
 )
+# --- BEV branding overlay (see backend/open_webui/branding.py) ---
+from open_webui.branding import BRAND_CONNECTION_ERROR as _BEV_CONN_ERR, BRAND_OPENROUTER_TITLE as _BEV_OR_TITLE
 from open_webui.internal.db import get_async_session
 from open_webui.models.access_grants import AccessGrants
 from open_webui.models.groups import Groups
@@ -161,7 +163,7 @@ async def get_headers_and_cookies(
         **(
             {
                 'HTTP-Referer': 'https://openwebui.com/',
-                'X-Title': 'BEV',
+                'X-Title': _BEV_OR_TITLE,
             }
             if 'openrouter.ai' in url
             else {}
@@ -352,7 +354,7 @@ async def speech(request: Request, user=Depends(get_verified_user)):
 
             raise HTTPException(
                 status_code=r.status if r else 500,
-                detail=detail if detail else 'Server Connection Error',
+                detail=detail if detail else _BEV_CONN_ERR,
             )
 
     except ValueError:
@@ -644,7 +646,7 @@ async def get_models(request: Request, url_idx: int | None = None, user=Depends(
             except aiohttp.ClientError as e:
                 # ClientError covers all aiohttp requests issues
                 log.exception(f'Client error: {str(e)}')
-                raise HTTPException(status_code=500, detail='Server Connection Error')
+                raise HTTPException(status_code=500, detail=_BEV_CONN_ERR)
             except Exception as e:
                 log.exception(f'Unexpected error: {e}')
                 error_detail = f'Unexpected error: {str(e)}'
@@ -1612,7 +1614,7 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
         log.exception(e)
         raise HTTPException(
             status_code=r.status if r else 500,
-            detail='Server Connection Error',
+            detail=_BEV_CONN_ERR,
         )
     finally:
         if not streaming:

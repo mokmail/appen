@@ -3,36 +3,18 @@
 @config '../tailwind.config.js';
 
 @theme {
-	/* Federal Web Styleguide — neutral grays (no purple)
-	   Light backgrounds: #fff / #f0f4f5 / #e5ecee / #ccd9de (subtle blue-grey)
-	   Mid/dark: #949494 / #757575 / #4d4d4d / #2b2b2b / #000 (pure neutral) */
-	--color-gray-50: oklch(0.993 0 0);          /* #ffffff Standard-Hintergrund */
-	--color-gray-100: oklch(0.959 0.003 250);   /* #f0f4f5 field-01 (very subtle) */
-	--color-gray-200: oklch(0.933 0.003 250);   /* #e5ecee table */
-	--color-gray-300: oklch(0.874 0.003 250);   /* #ccd9de border */
-	--color-gray-400: oklch(0.662 0 0);         /* #949494 disabled (neutral) */
-	--color-gray-500: oklch(0.662 0 0);         /* #949494 disabled */
-	--color-gray-600: oklch(0.559 0 0);         /* #757575 text-03 (neutral) */
-	--color-gray-700: oklch(0.417 0 0);         /* #4d4d4d text-02 (neutral) */
-	--color-gray-800: oklch(0.287 0 0);         /* #2b2b2b (neutral) */
-	--color-gray-850: oklch(0.22 0 0);          /* near-black neutral */
-	--color-gray-900: oklch(0.18 0 0);          /* dark neutral */
-	--color-gray-950: oklch(0.13 0 0);          /* near-black neutral */
-
-	/* Federal Corporate Design — primary blue scale remapped to Rot (red) #e1320f
-	   so every bg-blue-600 / text-blue-* / border-blue-* across the app becomes
-	   the federal red. */
-	--color-blue-50:  oklch(0.961 0.061 331.9);  /* #fef2f0 */
-	--color-blue-100: oklch(0.926 0.073 346.2); /* #fde4e0 */
-	--color-blue-200: oklch(0.855 0.109 3.7);   /* #fac7bf */
-	--color-blue-300: oklch(0.753 0.174 15.6);  /* #f59d90 */
-	--color-blue-400: oklch(0.647 0.258 25.7);  /* #ef6e5a */
-	--color-blue-500: oklch(0.532 0.379 51.7);  /* #e1320f — federal primary red */
-	--color-blue-600: oklch(0.491 0.344 51.1);  /* #c92d0d — button red (contrast) */
-	--color-blue-700: oklch(0.464 0.404 71.8);  /* #b92b06 — federal dark red (AA) */
-	--color-blue-800: oklch(0.387 0.273 56.4);  /* #8f2105 */
-	--color-blue-900: oklch(0.324 0.215 53.9);  /* #6e1a04 */
-	--color-blue-950: oklch(0.224 0.134 53.0);  /* #3d0e02 */
+	--color-gray-50: oklch(0.98 0 0);
+	--color-gray-100: oklch(0.94 0 0);
+	--color-gray-200: oklch(0.92 0 0);
+	--color-gray-300: oklch(0.85 0 0);
+	--color-gray-400: oklch(0.77 0 0);
+	--color-gray-500: oklch(0.69 0 0);
+	--color-gray-600: oklch(0.51 0 0);
+	--color-gray-700: oklch(0.42 0 0);
+	--color-gray-800: oklch(0.32 0 0);
+	--color-gray-850: oklch(0.27 0 0);
+	--color-gray-900: oklch(0.2 0 0);
+	--color-gray-950: oklch(0.16 0 0);
 }
 
 /*

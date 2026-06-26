@@ -15,7 +15,8 @@
 	import { getTerminalServers } from '$lib/apis/terminal';
 	import { getUserSettings } from '$lib/apis/users';
 
-	import { WEBUI_VERSION, WEBUI_API_BASE_URL } from '$lib/constants';
+	import { WEBUI_API_BASE_URL } from '$lib/constants';
+	import { WEBUI_VERSION } from '$lib/stores';
 	import { compareVersion } from '$lib/utils';
 
 	import {
@@ -369,8 +370,8 @@
 	const checkForVersionUpdates = async () => {
 		version = await getVersionUpdates(localStorage.token).catch((error) => {
 			return {
-				current: WEBUI_VERSION,
-				latest: WEBUI_VERSION
+				current: $WEBUI_VERSION,
+				latest: $WEBUI_VERSION
 			};
 		});
 	};

@@ -2,8 +2,7 @@
 	import Fuse from 'fuse.js';
 	import Bolt from '$lib/components/icons/Bolt.svelte';
 	import { onMount, getContext } from 'svelte';
-	import { settings, WEBUI_NAME } from '$lib/stores';
-	import { WEBUI_VERSION } from '$lib/constants';
+	import { settings, WEBUI_NAME, WEBUI_VERSION } from '$lib/stores';
 
 	const i18n = getContext('i18n');
 
@@ -76,7 +75,7 @@
 				? ' -mt-1'
 				: 'text-center items-center justify-center'}  self-start text-gray-600 dark:text-gray-400"
 		>
-			{$WEBUI_NAME} ‧ v{WEBUI_VERSION}
+			{$WEBUI_NAME} ‧ v{$WEBUI_VERSION}
 		</div>
 	{/if}
 </div>

@@ -469,6 +469,20 @@ from open_webui.env import (
     WEBUI_SESSION_COOKIE_SAME_SITE,
     WEBUI_SESSION_COOKIE_SECURE,
 )
+# --- BEV branding overlay (see backend/open_webui/branding.py) ---
+from open_webui.branding import (  # noqa: E402
+    BRAND_BG_COLOR_DARK as _BEV_BG_DARK,
+    BRAND_BG_COLOR_LIGHT as _BEV_BG_LIGHT,
+    BRAND_CONNECTION_ERROR as _BEV_CONN_ERR,
+    BRAND_DESCRIPTION as _BEV_DESC,
+    BRAND_FAVICON_URL as _BEV_FAVICON,
+    BRAND_META_COLOR_DARK as _BEV_META_DARK,
+    BRAND_META_COLOR_LIGHT as _BEV_META_LIGHT,
+    BRAND_NAME as _BEV_NAME,
+    BRAND_SHORT_NAME as _BEV_SHORT,
+    BRAND_THEME_KEY as _BEV_THEME_KEY,
+    BRAND_URL as _BEV_URL,
+)
 from open_webui.internal.db import ScopedSession, engine, get_async_session
 from open_webui.models.access_grants import AccessGrants
 from open_webui.models.channels import Channels
@@ -493,6 +507,7 @@ from open_webui.routers import (
     groups,
     images,
     knowledge,
+    knowledge_gitlab,  # BEV overlay: GitLab knowledge integration
     memories,
     models,
     notes,
@@ -1434,6 +1449,8 @@ app.include_router(notes.router, prefix='/api/v1/notes', tags=['notes'])
 
 app.include_router(models.router, prefix='/api/v1/models', tags=['models'])
 app.include_router(knowledge.router, prefix='/api/v1/knowledge', tags=['knowledge'])
+# BEV overlay: GitLab knowledge integration router (see routers/knowledge_gitlab.py)
+app.include_router(knowledge_gitlab.router, prefix='/api/v1/knowledge', tags=['knowledge'])
 app.include_router(prompts.router, prefix='/api/v1/prompts', tags=['prompts'])
 app.include_router(tools.router, prefix='/api/v1/tools', tags=['tools'])
 app.include_router(skills.router, prefix='/api/v1/skills', tags=['skills'])
@@ -2402,6 +2419,19 @@ async def get_app_config(request: Request):
         'name': app.state.WEBUI_NAME,
         'version': VERSION,
         'default_locale': str(DEFAULT_LOCALE),
+        # --- BEV branding overlay: expose env-driven brand values to frontend ---
+        'brand': {
+            'name': _BEV_NAME,
+            'short_name': _BEV_SHORT,
+            'description': _BEV_DESC,
+            'url': _BEV_URL,
+            'favicon_url': _BEV_FAVICON,
+            'theme_key': _BEV_THEME_KEY,
+            'bg_color_dark': _BEV_BG_DARK,
+            'bg_color_light': _BEV_BG_LIGHT,
+            'meta_color_dark': _BEV_META_DARK,
+            'meta_color_light': _BEV_META_LIGHT,
+        },
         'oauth': {
             'providers': {name: config.get('name', name) for name, config in OAUTH_PROVIDERS.items()},
             'auto_redirect': app.state.config.OAUTH_AUTO_REDIRECT,
@@ -2852,13 +2882,13 @@ async def get_manifest_json():
             r.raise_for_status()
             return await r.json()
     else:
-        return {
+        _manifest = {
             'name': app.state.WEBUI_NAME,
-            'short_name': 'BEV',
-            'description': f'{app.state.WEBUI_NAME} — KI-Plattform des Bundesamtes für Eich- und Vermessungswesen.',
+            'short_name': app.state.WEBUI_NAME,
+            'description': f'{app.state.WEBUI_NAME} is an open, extensible, user-friendly interface for AI that adapts to your workflow.',
             'start_url': '/',
             'display': 'standalone',
-            'background_color': '#1a2530',
+            'background_color': '#343541',
             'icons': [
                 {
                     'src': '/static/logo.png',
@@ -2879,6 +2909,11 @@ async def get_manifest_json():
                 'params': {'text': 'shared'},
             },
         }
+        # --- BEV branding overlay ---
+        _manifest['short_name'] = _BEV_SHORT
+        _manifest['description'] = _BEV_DESC
+        _manifest['background_color'] = _BEV_BG_DARK
+        return _manifest
 
 
 @app.get('/opensearch.xml')

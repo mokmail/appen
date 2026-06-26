@@ -16,8 +16,8 @@
 	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
 	import Switch from '$lib/components/common/Switch.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
-	import { WEBUI_BUILD_HASH, WEBUI_VERSION } from '$lib/constants';
-	import { banners as _banners, config, showChangelog } from '$lib/stores';
+	import { WEBUI_BUILD_HASH } from '$lib/constants';
+	import { banners as _banners, config, showChangelog, WEBUI_VERSION } from '$lib/stores';
 	import type { Banner } from '$lib/types';
 	import { compareVersion } from '$lib/utils';
 	import { onMount, getContext } from 'svelte';
@@ -62,8 +62,8 @@
 		updateAvailable = null;
 		version = await getVersionUpdates(localStorage.token).catch((error) => {
 			return {
-				current: WEBUI_VERSION,
-				latest: WEBUI_VERSION
+				current: $WEBUI_VERSION,
+				latest: $WEBUI_VERSION
 			};
 		});
 
@@ -157,7 +157,7 @@
 							<div class="flex flex-col text-xs text-gray-700 dark:text-gray-200">
 								<div class="flex gap-1">
 									<Tooltip content={WEBUI_BUILD_HASH}>
-										v{WEBUI_VERSION}
+										v{$WEBUI_VERSION}
 									</Tooltip>
 
 									{#if $config?.features?.enable_version_update_check}

@@ -3,7 +3,7 @@
 	import { marked } from 'marked';
 	import DOMPurify from 'dompurify';
 
-	import { config, user, models as _models, temporaryChatEnabled } from '$lib/stores';
+	import { config, user, models as _models, temporaryChatEnabled, BRAND } from '$lib/stores';
 	import { onMount, getContext } from 'svelte';
 
 	import { blur, fade } from 'svelte/transition';
@@ -97,7 +97,7 @@
 				{#if models[selectedModelIdx]?.name}
 					<div class="bev-data mb-1.5">Modell · {models[selectedModelIdx]?.id}</div>
 				{:else}
-					<div class="bev-data mb-1.5">BEV · KI-Plattform</div>
+					<div class="bev-data mb-1.5">{$BRAND.short_name} · {$BRAND.description}</div>
 				{/if}
 				<div class=" capitalize line-clamp-1" in:fade={{ duration: 200 }}>
 					{#if models[selectedModelIdx]?.name}

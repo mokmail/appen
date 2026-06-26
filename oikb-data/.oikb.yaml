@@ -1,7 +1,7 @@
 sources:
 - name: gitlab
   source: gitlab:mokmail1/chat
-  kb-id: 4c5b0c7d-08fa-40a8-a702-be3bdbdc93ff
+  kb-id: f70b3c8f-ba98-42a6-8c22-2a8610cce337
   filter:
     include:
     - '*.md'
@@ -12,7 +12,4 @@ sources:
     - '*.py'
 - name: BEV
   source: web:https://bev.gv.at
-  kb-id: 8890f9b2-f2b3-40d1-8286-ea9e7006236d
-- name: local
-  source: /home/kmail/maria
-  kb-id: 493c745c-a24c-4be7-bc64-c0596bbbfac4
+  kb-id: f70b3c8f-ba98-42a6-8c22-2a8610cce337

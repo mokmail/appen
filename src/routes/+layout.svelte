@@ -27,6 +27,7 @@
 		temporaryChatEnabled,
 		isLastActiveTab,
 		isApp,
+		BRAND,
 		appInfo,
 		toolServers,
 		playingNotificationSound,
@@ -1054,6 +1055,10 @@
 			// Save Backend Status to Store
 			await config.set(backendConfig);
 			await WEBUI_NAME.set(backendConfig.name);
+			// BEV overlay: populate brand store from backend config (env-driven)
+			if (backendConfig.brand) {
+				await BRAND.set(backendConfig.brand);
+			}
 
 			if ($config) {
 				await setupSocket($config.features?.enable_websocket ?? true);
@@ -1170,7 +1175,9 @@
 	<link crossorigin="anonymous" rel="icon" href="{WEBUI_BASE_URL}/static/favicon.png" />
 
 	<meta name="apple-mobile-web-app-title" content={$WEBUI_NAME} />
-	<meta name="description" content={$WEBUI_NAME} />
+	<meta name="description" content={$BRAND.description} />
+	<!-- BEV overlay: env-driven theme-color -->
+	<meta name="theme-color" content={$BRAND.meta_color_dark} />
 	<link
 		rel="search"
 		type="application/opensearchdescription+xml"
