@@ -14,6 +14,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        - USE_SLIM=true
     #image: bev/open-webui:local
     container_name: open-webui
     ulimits:
@@ -27,11 +29,14 @@ services:
     ports:
       - ${OPEN_WEBUI_PORT-3000}:8080
     environment:
-      - 'OLLAMA_BASE_URL=http://ollama:11434'
+      - 'OLLAMA_BASE_URL=http://host.docker.internal:11434'
       - 'WEBUI_SECRET_KEY=${WEBUI_SECRET_KEY}'
       - 'ENABLE_API_KEYS=${ENABLE_API_KEYS}'
       - 'WEBUI_NAME=Bundesamt für Eich- und Vermessungswesen'
       - 'ENABLE_KB_EXEC=${ENABLE_KB_EXEC}'
+      - 'RAG_EMBEDDING_ENGINE=ollama'
+      - 'RAG_OLLAMA_BASE_URL=http://host.docker.internal:11434'
+      - 'RAG_EMBEDDING_MODEL=nomic-embed-text'
     extra_hosts:
       - host.docker.internal:host-gateway
     restart: unless-stopped

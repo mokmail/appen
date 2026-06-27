@@ -182,8 +182,8 @@ logs: ## Tail logs for all services
 logs-backend: ## Tail open-webui logs only
 	$(DOCKER_COMPOSE) logs -f --tail=200 open-webui
 
-logs-ollama: ## Tail ollama logs only
-	$(DOCKER_COMPOSE) logs -f --tail=200 ollama
+logs-ollama: ## List host Ollama models (Ollama runs on host, not in compose)
+	ollama list 2>/dev/null || echo "Ollama not found on host"
 
 .PHONY: down down-volumes
 down: ## Stop & remove containers (keeps volumes)
@@ -235,8 +235,8 @@ playwright: ## Start the Playwright browser profile
 # ============================================================================
 
 .PHONY: docker-build docker-build-overlay docker-run docker-run-overlay docker-stop docker-rm
-docker-build: ## Build the standalone Docker image (from source Dockerfile)
-	docker build -t $(IMAGE) .
+docker-build: ## Build the standalone Docker image (from source Dockerfile, slim for CPU)
+	docker build --build-arg USE_SLIM=true -t $(IMAGE) .
 
 docker-build-overlay: ## Build the overlay image on top of the official release (Dockerfile.overlay)
 	@READ_TAG=$${OPEN_WEBUI_TAG:-main}; \

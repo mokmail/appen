@@ -11,7 +11,10 @@ readonly HOST_PORT="${OPEN_WEBUI_PORT:-3000}"
 readonly CONTAINER_PORT=8080
 
 echo "Building ${IMAGE} image..."
-docker build -t "$IMAGE" .
+docker build \
+  --build-arg USE_SLIM=true \
+  ${NODE_OPTIONS:+--build-arg NODE_OPTIONS="$NODE_OPTIONS"} \
+  -t "$IMAGE" .
 
 echo "Stopping any existing ${CONTAINER} container..."
 docker stop "$CONTAINER" 2>/dev/null || true
