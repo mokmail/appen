@@ -16,8 +16,8 @@ export const BRAND_URL = 'https://www.bev.gv.at';
 export const BRAND_THEME_KEY = 'bev';
 
 /** PWA / manifest */
-export const BRAND_BG_COLOR_DARK = '#1a2530';
-export const BRAND_BG_COLOR_LIGHT = '#eff4f7';
+export const BRAND_BG_COLOR_DARK = '#0f1419';
+export const BRAND_BG_COLOR_LIGHT = '#f5f8fa';
 export const BRAND_META_COLOR_DARK = '#1a1a1a';
 export const BRAND_META_COLOR_LIGHT = '#ffffff';
 
